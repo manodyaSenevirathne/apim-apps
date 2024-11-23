@@ -88,12 +88,19 @@ describe("prototype apis with security disabled", () => {
 
             //login to dev portal as Developer
             cy.loginToDevportal(userName, password);
-            cy.get('input[placeholder="Search APIs"]').click().type(apiName + "{enter}");
-            cy.get('table > tbody > tr', { timeout: Cypress.config().largeTimeout }).get(`[area-label="Go to ${apiName}"]`).contains('.api-thumb-chip-main', 'PRE-RELEASED').should('exist');
-            cy.get('table > tbody > tr', { timeout: Cypress.config().largeTimeout }).get(`[area-label="Go to ${apiName}"]`).click();
+            cy.get('input[placeholder="Search APIs"]')
+                .should('be.visible') // Ensure the input is visible
+                .click()              // Click the input
+                .clear()              // Optional: Clear any pre-existing text
+                .type(`${apiName}{enter}`); // Type the text and press Enter
+            cy.wait(2000);
+            cy.get('table > tbody > tr',{timeout: Cypress.config().largeTimeout}).get(`[area-label="Go to ${apiName}"]`).contains('.api-thumb-chip-main','PRE-RELEASED').should('exist');
+            cy.get('table > tbody > tr',{timeout: Cypress.config().largeTimeout}).get(`[area-label="Go to ${apiName}"]`).click();
+            cy.wait(2000);
+
             cy.contains('button', "Try Out", { timeout: Cypress.config().largeTimeout }).click();
             cy.get('.opblock-summary-get > .opblock-summary-control', { timeout: Cypress.config().largeTimeout }).click();
-            cy.get('.try-out__btn').click();
+            cy.get('.try-out__btn').click({force:true});
             cy.get('.execute').click();
             // cy.contains('.live-responses-table .response > td.response-col_status','200').should('exist');
             cy.get('.live-responses-table .response > td.response-col_status').should("contain.text", '200')

@@ -28,7 +28,7 @@ describe("Mock the api response and test it", () => {
 
     it("Mock the api response and test it", {
         retries: {
-            runMode: 3,
+            runMode: 1,
             openMode: 0,
         },
     }, () => {
@@ -44,18 +44,21 @@ describe("Mock the api response and test it", () => {
         cy.get('#browse-to-upload-btn').wait(5000).then(function () {
             const filepath = `api_artifacts/petstore-v3.json`
             cy.get('input[type="file"]').attachFile(filepath)
+            cy.wait(5000);
         });
 
         cy.get('#open-api-create-next-btn').click();
         cy.wait(3000);
         cy.get('#itest-id-apiversion-input', {timeout: Cypress.config().largeTimeout});
         cy.document().then((doc) => {
+            cy.get('#itest-id-apiname-input').invoke('val').then((val) => cy.get('#itest-id-apiname-input').clear().type(`${val}${Math.floor(Math.random() * 100) + 1}`));
             cy.get('#itest-id-apicontext-input').clear();
             cy.get('#itest-id-apicontext-input').type(apiName);
             cy.get('#itest-id-apiversion-input').click();
             const version = doc.querySelector('#itest-id-apiversion-input').value;
             // finish the wizard
             cy.get('#open-api-create-btn').should('not.have.class', 'Mui-disabled').click({force:true});
+            cy.wait(5000);
             cy.url().should('contains', 'overview').then(url => {
                 testApiID = /apis\/(.*?)\/overview/.exec(url)[1];
                 cy.log("API ID", testApiID);
@@ -110,6 +113,7 @@ describe("Mock the api response and test it", () => {
                         cy.get('#itest-api-name-version', { timeout: Cypress.config().largeTimeout });
                         cy.get(`#itest-id-deleteapi-icon-button`).click({ force: true });
                         cy.get(`#itest-id-deleteconf`).click();
+                        cy.wait(5000);
                     })
                 });
             });    
@@ -117,5 +121,6 @@ describe("Mock the api response and test it", () => {
     });
     afterEach(() => {
         Utils.deleteAPI(testApiID);
+        cy.wait(5000);
     })
 })

@@ -35,7 +35,7 @@ describe("Create new API product version", () => {
 
     it("Create new API product version", {
         retries: {
-            runMode: 3,
+            runMode: 1,
             openMode: 0,
         },
     }, () => {
@@ -47,6 +47,7 @@ describe("Create new API product version", () => {
         cy.get('#browse-to-upload-btn').wait(5000).then(function () {
             const filepath = `api_artifacts/petstore-v3.json`
             cy.get('input[type="file"]').attachFile(filepath)
+            cy.wait(5000);
         });
 
         cy.get('#open-api-create-next-btn').click();
@@ -59,6 +60,7 @@ describe("Create new API product version", () => {
             cy.get('#itest-id-apiversion-input').click();
             const version = doc.querySelector('#itest-id-apiversion-input').value;
             cy.get('#open-api-create-btn').should('not.have.class', 'Mui-disabled').click({ force: true });
+            cy.wait(5000);
 
             cy.url().should('contains', 'overview').then(url => {
                 testApiID = /apis\/(.*?)\/overview/.exec(url)[1];
@@ -92,6 +94,7 @@ describe("Create new API product version", () => {
                     cy.get('#add-all-resources-btn').click({ force: true });
                     cy.wait(5000);
                     cy.get('#create-api-product-btn').scrollIntoView().click({ force: true });
+                    cy.wait(3000);
                     cy.url().should('contains', 'overview').then(urlProduct => {
                         const productID = /api-products\/(.*?)\/overview/.exec(urlProduct)[1];
                         cy.log("API Product ID", productID);
@@ -120,6 +123,7 @@ describe("Create new API product version", () => {
                         cy.get('#itest-api-name-version', { timeout: Cypress.config().largeTimeout });
                         cy.get(`#itest-id-deleteapi-icon-button`).click();
                         cy.get(`#itest-id-deleteconf`).click();
+                        cy.wait(5000);
                     });
                 });
             });
@@ -127,5 +131,6 @@ describe("Create new API product version", () => {
     });
     afterEach(() => {
         Utils.deleteAPI(testApiID);
+        cy.wait(5000);
     })
 })

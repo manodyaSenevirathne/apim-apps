@@ -108,7 +108,7 @@ describe("Lifecycle changes", () => {
 
             cy.get('button[data-testid="Retire-btn"]').should('exist');
             cy.wait(2000);
-            cy.get('button[data-testid="Retire-btn"]', {timeout: Cypress.config().largeTimeout}).click(); 
+            cy.get('button[data-testid="Retire-btn"]', {timeout: Cypress.config().largeTimeout}).click();
             cy.get('#itest-id-conf', {timeout: Cypress.config().largeTimeout}).contains('RETIRE').click();
         });
     });

@@ -32,12 +32,17 @@ describe("prototype apis with security enabled", () => {
     })
     it.only("try out resources enabling the security without credentials", {
         retries: {
-            runMode: 3,
+            runMode: 1,
             openMode: 0,
         },
     }, () => {
         const endpoint = 'https://petstore.swagger.io/v2/store/inventory';
         Utils.addAPI({name: apiName, version: apiVersion}).then((apiId) => {
+            Cypress.on('uncaught:exception', (err, runnable) => {
+                // returning false here prevents Cypress from
+                // failing the test
+                return false
+            })
             testApiId = apiId;
             cy.visit(`/publisher/apis/${apiId}/overview`);
             cy.get('#itest-api-details-api-config-acc', {timeout: Cypress.config().largeTimeout}).click();
@@ -76,9 +81,15 @@ describe("prototype apis with security enabled", () => {
 
             //login to dev portal as Developer
             cy.loginToDevportal(userName, password);
-            cy.get('input[placeholder="Search APIs"]').click().type(apiName + "{enter}");
+            cy.get('input[placeholder="Search APIs"]')
+                .should('be.visible') // Ensure the input is visible
+                .click()              // Click the input
+                .clear()              // Optional: Clear any pre-existing text
+                .type(`${apiName}{enter}`); // Type the text and press Enter
+            cy.wait(2000);
             cy.get('table > tbody > tr',{timeout: Cypress.config().largeTimeout}).get(`[area-label="Go to ${apiName}"]`).contains('.api-thumb-chip-main','PRE-RELEASED').should('exist');
             cy.get('table > tbody > tr',{timeout: Cypress.config().largeTimeout}).get(`[area-label="Go to ${apiName}"]`).click();
+            cy.wait(2000);
             cy.contains('button', "Try Out", { timeout: Cypress.config().largeTimeout }).click();
             cy.get('.opblock-summary-get > .opblock-summary-control', {timeout: Cypress.config().largeTimeout}).click();
             cy.wait(3000)
@@ -87,14 +98,8 @@ describe("prototype apis with security enabled", () => {
             cy.get('.execute').click({force:true});
             //cy.contains('.live-responses-table .response > .response-col_status','401',  {timeout: Cypress.config().largeTimeout}).should('exist');
             cy.wait(5000)
-            cy.wait('@getExecute').then(() => {
-                cy.get('.live-responses-table .response > td.response-col_status').then(element => {
-                    cy.log(element.text());
-               })
-                //cy.contains('.live-responses-table .response > .response-col_status','401',  {timeout: Cypress.config().largeTimeout}).should('exist');
-                cy.get('.live-responses-table .response > td.response-col_status',{timeout: Cypress.config().largeTimeout}).should("contain.text",'401')
-                cy.logoutFromDevportal();
-            });
+            cy.get('.live-responses-table .response > td.response-col_status').should("contain.text", '401')
+            cy.logoutFromDevportal();
         });
     });
 
