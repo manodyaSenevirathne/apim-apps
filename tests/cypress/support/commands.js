@@ -991,7 +991,11 @@ Cypress.Commands.add('updateTenantConfig', (username, password, tenant, config) 
     })
     // Try to improve this
     // Better to modify the API response accordingly instead of mocking the entire API call
-    cy.intercept('GET', 'https://localhost:9443/api/am/admin/v4/tenant-config', {
+    
+    const baseUrl = Cypress.config('baseUrl'); 
+    const url = new URL(baseUrl); 
+    const hostname = url.hostname; 
+    cy.intercept('GET', `https://${hostname}:9443/api/am/admin/v4/tenant-config`, {
         statusCode: 200,
         body: config
     });

@@ -28,7 +28,7 @@ describe("Mock the api response and test it", () => {
 
     it("Mock the api response and test it", {
         retries: {
-            runMode: 3,
+            runMode: 1,
             openMode: 0,
         },
     }, () => {
@@ -105,6 +105,7 @@ describe("Mock the api response and test it", () => {
 
                     cy.get(`#itest-id-deleteapi-icon-button`).click();
                     cy.get(`#itest-id-deleteconf`).click();
+                    cy.wait(5000);
                 })
 
             });
@@ -112,5 +113,6 @@ describe("Mock the api response and test it", () => {
     });
     afterEach(() => {
         Utils.deleteAPI(testApiID);
+        cy.wait(5000);
     })
 })

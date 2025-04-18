@@ -39,8 +39,12 @@ describe("publisher-015-02 : Verify Gateway Environments", () => {
             // Wait for the revisions call to finish
             cy.get('#undeploy-btn').should('not.have.class', 'Mui-disabled').should('exist');
             // Verify environments
-            cy.contains('http://localhost:8280').should('exist');
-            cy.contains('https://localhost:8243').should('exist');
+            const baseUrl = Cypress.config('baseUrl'); 
+            const url = new URL(baseUrl); 
+            const hostname = url.hostname; 
+
+            cy.contains(`http://${hostname}:8280`).should('exist');
+            cy.contains(`https://${hostname}:8243`).should('exist');
 
             // Delete API
             Utils.deleteAPI(apiId);

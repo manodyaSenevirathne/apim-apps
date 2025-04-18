@@ -152,7 +152,7 @@ export default class Utils {
     }
 
     static deployRevision(apiId, revisionId) {
-        const payload = `[{"name": "Default", "vhost": "localhost", "displayOnDevportal": true}]`;
+        const payload = `[{"name": "Default", "vhost": "${new URL(Cypress.config().baseUrl).hostname}", "displayOnDevportal": true}]`;
 
         return new Cypress.Promise((resolve, reject) => {
             try {
@@ -193,6 +193,7 @@ export default class Utils {
                             console.log(result)
                             resolve(result.stdout);
                         })
+                        cy.wait(5000);
                     })
             } catch (e) {
                 reject('Error while deleting api');
@@ -217,6 +218,7 @@ export default class Utils {
                         cy.exec(curl).then(result => {
                             resolve(result.stdout);
                         })
+                        cy.wait(5000);
                     })
             } catch (e) {
                 reject('Error while deleting api product');

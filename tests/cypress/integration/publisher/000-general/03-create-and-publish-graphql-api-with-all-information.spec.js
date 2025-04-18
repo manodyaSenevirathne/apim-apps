@@ -218,10 +218,12 @@ describe("Create GraphQl API from file", () => {
                 cy.wait('@getToken', { timeout: Cypress.config().largeTimeout })
                   .its('response.statusCode').should('eq', 200);
 
-                cy.get('[aria-label="Query Editor"]').type(starWarsQueryRequest);
+                cy.get('[aria-label="Query Editor"]').wait(3000).type(starWarsQueryRequest);
+                cy.wait(5000);
                 cy.get('.graphiql-execute-button').click();
 
                 cy.intercept('POST', `${apiContext}/1.0.0`, (res) => {
+                  cy.wait(3000);
                   expect(res.body).to.include(starWarsQueryResponse);
                 }).as("queryResponse");
 
@@ -237,7 +239,8 @@ describe("Create GraphQl API from file", () => {
                 cy.wait('@getToken', { timeout: Cypress.config().largeTimeout })
                   .its('response.statusCode').should('eq', 200);
 
-                cy.get('[aria-label="Query Editor"]').type('{backspace}' + starWarsSubscriptionRequest);
+                cy.get('[aria-label="Query Editor"]').wait(2000).type('{backspace}' + starWarsSubscriptionRequest);
+                cy.wait(5000);
                 cy.get('.graphiql-execute-button').click();
 
                 cy.intercept('GET', `${apiContext}/1.0.0/*`, (res) => {
