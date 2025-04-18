@@ -58,8 +58,8 @@ function zipDirectory(sourceDir, outPath) {
   });
 }
 
-uploadFile('./cypress/reports/html/mochawesome-bundle.html', `440-result/mochawesome-bundle-${timestamp}.html`, "text/html");
+uploadFile('./cypress/reports/html/mochawesome-bundle.html', `450-result/mochawesome-bundle-${timestamp}.html`, "text/html");
 var zipFileOutputLocation = `./cypress/screenshots-${timestamp}.zip`;
 zipDirectory('./cypress/screenshots', zipFileOutputLocation).then(()=>{
-  uploadFile(zipFileOutputLocation, `440-result/screenshots-${timestamp}.zip`, "application/zip")
+  uploadFile(zipFileOutputLocation, `450-result/screenshots-${timestamp}.zip`, "application/zip")
 });
