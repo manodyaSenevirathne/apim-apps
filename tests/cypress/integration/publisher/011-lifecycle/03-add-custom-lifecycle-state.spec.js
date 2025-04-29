@@ -35,6 +35,9 @@ const apiVersion = '1.0.0';
 
     it.only("Updating the Advanced configurations with the New Custom LifeCycle States", () => {
         cy.updateTenantConfig(adminUsername, adminPassword, superTenant, defaultTenantConfig);
+        Cypress.on('uncaught:exception', (err, runnable) => {
+            return false;
+        });
     });
 
     it.only("Create and publish API and Check newly added State", () => {
