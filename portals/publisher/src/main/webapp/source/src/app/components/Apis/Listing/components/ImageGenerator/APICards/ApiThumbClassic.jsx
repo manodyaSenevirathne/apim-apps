@@ -514,7 +514,7 @@ class APIThumb extends Component {
                                 color='primary'
                             />
                         )}
-                        {(api.type === 'WEBSUB') && (api.gatewayVendor === 'solace') && (
+                        {api.gatewayVendor === 'solace' && (
                             <Chip
                                 size='small'
                                 classes={{ root: classes.thumbRightBy, label: classes.thumbRightByLabel }}
