@@ -160,7 +160,7 @@ function Subscriptions(props) {
     }
     return (
         (<Root>
-            {(api.gatewayVendor === 'wso2' || api.gatewayVendor === 'solace') &&
+            {(api.gatewayVendor === 'wso2' || api.gatewayType === 'solace') &&
                 (
                     <SubscriptionPoliciesManage
                         api={api}
@@ -191,7 +191,7 @@ function Subscriptions(props) {
                     setTenantList={setTenantList}
                 />
             )}
-            {(api.gatewayVendor === 'wso2' || api.gatewayVendor === 'solace') && (
+            {(api.gatewayVendor === 'wso2' || api.gatewayType === 'solace') && (
                 <Grid
                     container
                     direction='row'

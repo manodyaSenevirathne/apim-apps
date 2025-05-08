@@ -442,7 +442,7 @@ class ApiThumbClassicLegacy extends React.Component {
                             </Typography>
                         </div>
                     );
-                } else if ((api.gatewayVendor === 'solace')) {
+                } else if ((api.gatewayType === 'solace')) {
                     // Solace APIs in prototyped status.
                     return (
                         <div className='api-thumb-chip-main'>
@@ -495,7 +495,7 @@ class ApiThumbClassicLegacy extends React.Component {
                 }
 
                 // Solace APIs which are not in prototyped status.
-                if ((api.gatewayVendor === 'solace')) {
+                if ((api.gatewayType === 'solace')) {
                     return (
                         <div className='api-thumb-chip-main'>
                             <Chip

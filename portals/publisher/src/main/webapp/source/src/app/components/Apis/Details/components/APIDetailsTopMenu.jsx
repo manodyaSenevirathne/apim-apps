@@ -348,7 +348,7 @@ const APIDetailsTopMenu = (props) => {
                         />
                     </MUIAlert>
                 )}
-                {api.gatewayVendor === 'solace' && (
+                {api.gatewayType === 'solace' && (
                     <MUIAlert
                         data-testid='itest-third-party-api-label'
                         variant='outlined'
@@ -361,7 +361,7 @@ const APIDetailsTopMenu = (props) => {
                         />
                     </MUIAlert>
                 )}
-                {(!api.advertiseInfo || !api.advertiseInfo.advertised || api.gatewayVendor !== 'solace') && (
+                {(!api.advertiseInfo || !api.advertiseInfo.advertised) && (api.gatewayType !== 'solace') && (
                     <div className={classes.topRevisionStyle}>
                         <TextField
                             id='revision-selector'
