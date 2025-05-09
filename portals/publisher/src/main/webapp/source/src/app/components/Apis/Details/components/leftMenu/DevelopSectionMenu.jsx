@@ -259,7 +259,7 @@ export default function DevelopSectionMenu(props) {
                         root: classes.root2
                     }}>
                     <div>
-                        {!isAPIProduct && !api.isWebSocket() && (
+                        {!isAPIProduct && !api.isWebSocket() && api.gatewayType !== 'solace' && (
                             <LeftMenuItem
                                 text={intl.formatMessage({
                                     id: 'Apis.Details.index.runtime.configs',

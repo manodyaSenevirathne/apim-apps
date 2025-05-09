@@ -1104,9 +1104,6 @@ class Details extends Component {
                                     <Route
                                         path={Details.subPaths.NEW_VERSION_PRODUCT}
                                         component={() => <CreateNewVersion />} />
-
-                                    <Route path={Details.subPaths.SUBSCRIPTIONS} component={() =>
-                                        <Subscriptions />} />
                                     {settings && settings.gatewayFeatureCatalog
                                         .gatewayFeatures[api.gatewayType ? api.gatewayType : 'wso2/synapse']
                                         .monetization.includes("monetization") &&
@@ -1133,10 +1130,14 @@ class Details extends Component {
                                         path={Details.subPaths.COMMENTS}
                                         component={() => <Comments apiObj={api} />}
                                     />
-                                    <Route
-                                        path={Details.subPaths.POLICIES}
-                                        component={() => <Policies api={api} />}
-                                    />
+                                    {settings && settings.gatewayFeatureCatalog
+                                        .gatewayFeatures[api.gatewayType ? api.gatewayType : 'wso2/synapse']
+                                        .policies.includes("policies") &&
+                                        <Route
+                                            path={Details.subPaths.POLICIES}
+                                            component={() => <Policies api={api} />}
+                                        />
+                                    }
                                     <Route
                                         path={Details.subPaths.COMPLIANCE}
                                         component={() => {

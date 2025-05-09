@@ -2270,6 +2270,16 @@ export default function Environments() {
                     </Typography>
                 </MuiAlert>
             )}
+            {api.gatewayType === 'solace' && (
+                <MuiAlert severity='info' className={classes.infoAlert}>
+                    <Typography variant='body' align='left' data-testid='solace-api-deployment-dialog'>
+                        <FormattedMessage
+                            id='Apis.Details.Environments.Environments.solace.warning'
+                            defaultMessage='This API is marked as a Solace API. Hence, deployments are not required.'
+                        />
+                    </Typography>
+                </MuiAlert>
+            )}
             {allRevisions && allRevisions.length === 0 && (
                 <DeploymentOnbording
                     classes={classes}
