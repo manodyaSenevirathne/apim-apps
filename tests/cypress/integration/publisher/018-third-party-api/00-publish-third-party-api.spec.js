@@ -26,6 +26,12 @@ let apiId ;
 let apiName;
 
 describe("Publish thirdparty api", () => {
+    Cypress.on('uncaught:exception', (err, runnable) => {
+        if (err.message && err.message.includes('ResizeObserver loop limit exceeded')) {
+            return false; 
+        }
+    });
+
     const { publisher, developer, password, } = Utils.getUserInfo();
     it.only("Publish thirdparty api", {
         retries: {
