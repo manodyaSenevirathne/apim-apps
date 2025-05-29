@@ -106,7 +106,8 @@ describe("Create new API product version", () => {
                         cy.visit(`/publisher/api-products/${productID}/overview`);
                         cy.get('#create-new-version-btn').click();
 
-                        cy.get('#newVersion').wait(3000).type(newVersion);
+                        cy.wait(3000);
+                        cy.get('#newVersion', { timeout: 10000 }).should('be.visible').and('not.be.disabled').type(newVersion);
                         cy.intercept('**/api-products/**').as('apiGet');
                         cy.get('#createBtn').click();
                         cy.wait('@apiGet', { timeout: 30000 }).then(() => {
