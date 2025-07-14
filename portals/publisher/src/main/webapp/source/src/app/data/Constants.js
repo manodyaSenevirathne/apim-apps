@@ -56,7 +56,7 @@ const CONSTS = {
         connectionRequestTimeoutDuration: -1,
         socketTimeoutDuration: -1,
         proxyConfigs: {
-            proxyEnabled: '',
+            proxyEnabled: false,
             proxyHost: '',
             proxyPort: '',
             proxyUsername: '',
