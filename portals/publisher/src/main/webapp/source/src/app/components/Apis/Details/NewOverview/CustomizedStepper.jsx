@@ -25,6 +25,8 @@ import LinkIcon from '@mui/icons-material/Link';
 import API from 'AppData/api';
 import { grey } from '@mui/material/colors';
 import styled from '@emotion/styled';
+import IconButton from '@mui/material/IconButton';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 const PREFIX = 'CustomizedStepper';
 
@@ -157,6 +159,7 @@ function ColorlibStepIcon(props) {
 export default function CustomizedStepper() {
     const [api, updateAPI] = useAPI();
     const [isUpdating, setUpdating] = useState(false);
+    const [isMandatoryPropertiesAvailable, setIsMandatoryPropertiesAvailable] = useState(false);
     const [deploymentsAvailable, setDeploymentsAvailable] = useState(false);
     const [isEndpointSecurityConfigured, setIsEndpointSecurityConfigured] = useState(false);
     const isPrototypedAvailable = api.apiType !== API.CONSTS.APIProduct && api.endpointConfig !== null
@@ -187,6 +190,34 @@ export default function CustomizedStepper() {
     const steps = (api.isWebSocket() || api.isGraphql() || api.isAsyncAPI() || api.gatewayVendor !== 'wso2')
         ? ['Develop', 'Deploy', 'Publish'] : ['Develop', 'Deploy', 'Test', 'Publish'];
     const forceComplete = [];
+
+    function validateMandatoryCustomProperties() {
+        api.getSettings()
+            .then((response) => {
+                const {customProperties} = response;
+                let mandatoryPropsAvailable;
+                if (customProperties && customProperties.length > 0) {
+                    const requiredPropertyNames = customProperties
+                        .filter(property => property.Required)
+                        .map(property => property.Name);
+                    if (requiredPropertyNames.length > 0) {
+                        mandatoryPropsAvailable = requiredPropertyNames.every(propertyName => {
+                            const property = api.additionalProperties.find(prop => prop.name === propertyName);
+                            return property && property.value !== '';
+                        });
+                    } else {
+                        mandatoryPropsAvailable = true;
+                    }
+                } else {
+                    mandatoryPropsAvailable = true;
+                }
+                setIsMandatoryPropertiesAvailable(mandatoryPropsAvailable);
+            })
+            .catch((error) => {
+                console.error('Error validating mandatory custom properties:', error);
+            });
+    }
+
     if (isPublished) {
         forceComplete.push(steps.indexOf('Publish') + 1);
     }
@@ -227,6 +258,7 @@ export default function CustomizedStepper() {
             }
 
         });
+        validateMandatoryCustomProperties();
     }, []);
 
     useEffect(() => {
@@ -478,24 +510,37 @@ export default function CustomizedStepper() {
                                 {isUpdating && <CircularProgress size={20} />}
                             </Button>
                         ) : (
-                            <Button
-                                size='small'
-                                variant='contained'
-                                color='primary'
-                                data-testid='publish-state-button'
-                                onClick={() => updateLCStateOfAPI(api.id, 'Publish')}
-                                disabled={((api.type !== 'WEBSUB' && !isEndpointAvailable)
+                            <>
+                                <Button
+                                    size='small'
+                                    variant='contained'
+                                    color='primary'
+                                    data-testid='publish-state-button'
+                                    onClick={() => updateLCStateOfAPI(api.id, 'Publish')}
+                                    disabled={((api.type !== 'WEBSUB' && !isEndpointAvailable)
                                     || (!isMutualSslOnly && !isTierAvailable))
                                     || !deploymentsAvailable
                                     || api.isRevision || AuthManager.isNotPublisher()
-                                    || api.workflowStatus === 'CREATED'}
-                            >
-                                <FormattedMessage
-                                    id='Apis.Details.Overview.CustomizedStepper.btn.publish'
-                                    defaultMessage='Publish'
-                                />
-                                {isUpdating && <CircularProgress size={20} />}
-                            </Button>
+                                    || api.workflowStatus === 'CREATED'
+                                    || !isMandatoryPropertiesAvailable}
+                                >
+                                    <FormattedMessage
+                                        id='Apis.Details.Overview.CustomizedStepper.btn.publish'
+                                        defaultMessage='Publish'
+                                    />
+                                    {isUpdating && <CircularProgress size={20} />}
+                                </Button>
+                                {deploymentsAvailable && !isMandatoryPropertiesAvailable && (
+                                    <Tooltip
+                                        title='Mandatory API Properties should be provided to publish an API.'
+                                        placement='bottom'
+                                    >
+                                        <IconButton color='inherit' size='small' aria-label='delete'>
+                                            <InfoOutlinedIcon fontSize='small' />
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
+                            </>
                         )}
                         {api.workflowStatus === 'CREATED' && (
                             <Typography variant='caption' color='error'>
