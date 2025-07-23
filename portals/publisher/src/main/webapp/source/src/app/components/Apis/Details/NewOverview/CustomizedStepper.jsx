@@ -194,7 +194,7 @@ export default function CustomizedStepper() {
     function validateMandatoryCustomProperties() {
         api.getSettings()
             .then((response) => {
-                const {customProperties} = response;
+                const { customProperties } = response;
                 let mandatoryPropsAvailable;
                 if (customProperties && customProperties.length > 0) {
                     const requiredPropertyNames = customProperties
@@ -518,11 +518,11 @@ export default function CustomizedStepper() {
                                     data-testid='publish-state-button'
                                     onClick={() => updateLCStateOfAPI(api.id, 'Publish')}
                                     disabled={((api.type !== 'WEBSUB' && !isEndpointAvailable)
-                                    || (!isMutualSslOnly && !isTierAvailable))
-                                    || !deploymentsAvailable
-                                    || api.isRevision || AuthManager.isNotPublisher()
-                                    || api.workflowStatus === 'CREATED'
-                                    || !isMandatoryPropertiesAvailable}
+                                        || (!isMutualSslOnly && !isTierAvailable))
+                                        || !deploymentsAvailable
+                                        || api.isRevision || AuthManager.isNotPublisher()
+                                        || api.workflowStatus === 'CREATED'
+                                        || !isMandatoryPropertiesAvailable}
                                 >
                                     <FormattedMessage
                                         id='Apis.Details.Overview.CustomizedStepper.btn.publish'
