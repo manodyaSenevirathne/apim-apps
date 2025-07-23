@@ -114,12 +114,13 @@ const ApisTableContent = ({ apis, updateApiList }) => {
     const [provider, setProvider] = useState('');
     const [editableRows, setEditableRows] = useState(new Set());
 
-    const handleEditClick = (apiId) => {
+    const handleEditClick = (apiId, apiProvider) => {
         setEditableRows((prevRows) => {
             const newRows = new Set(prevRows);
             newRows.add(apiId);
             return newRows;
         });
+        setProvider(apiProvider);
     };
 
     const handleCancelClick = (apiId) => {
@@ -200,7 +201,7 @@ const ApisTableContent = ({ apis, updateApiList }) => {
                         {!editableRows.has(api.id) && (
                             <StyledDiv>
                                 { api.provider }
-                                <IconButton color='primary' onClick={() => handleEditClick(api.id)}>
+                                <IconButton color='primary' onClick={() => handleEditClick(api.id, api.provider)}>
                                     <EditIcon aria-label='edit-api-settings' />
                                 </IconButton>
                             </StyledDiv>
