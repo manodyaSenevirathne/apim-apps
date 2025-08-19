@@ -189,6 +189,7 @@ class CreateScope extends React.Component {
         this.addScope = this.addScope.bind(this);
         this.validateScopeName = this.validateScopeName.bind(this);
         this.handleScopeNameInput = this.handleScopeNameInput.bind(this);
+        this.handleScopeNameBlur = this.handleScopeNameBlur.bind(this);
         this.validateScopeDetails = this.validateScopeDetails.bind(this);
         this.validateScopeDisplayName = this.validateScopeDisplayName.bind(this);
         this.handleScopeDisplayNameInput = this.handleScopeDisplayNameInput.bind(this);
@@ -272,8 +273,15 @@ class CreateScope extends React.Component {
      * @memberof CreateScope
      */
     handleScopeNameInput({ target: { id, value } }) {
-        this.validateScopeName(id, value);
+        const { sharedScope } = this.state;
+        sharedScope[id] = value;
+        this.setState({ sharedScope });
     }
+
+    handleScopeNameBlur = ({ target: { id, value } }) => {
+        this.validateScopeName(id, value);
+    };
+
 
     /**
      * Handle scope display name input.
@@ -556,6 +564,7 @@ class CreateScope extends React.Component {
                                         }}
                                         value={sharedScope.name || ''}
                                         onChange={this.handleScopeNameInput}
+                                        onBlur={this.handleScopeNameBlur}
                                     />
                                 </FormControl>
                                 <FormControl margin='normal'>
