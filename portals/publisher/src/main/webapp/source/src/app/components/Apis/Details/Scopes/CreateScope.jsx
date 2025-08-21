@@ -210,12 +210,12 @@ class CreateScope extends React.Component {
         }
     };
 
-     /**
+    /**
      * Handle scope name input.
      * @param {any} target The id and value of the target.
      * @memberof CreateScope
      */
-     handleScopeNameInput({ target: { id, value } }) {
+    handleScopeNameInput({ target: { id, value } }) {
         const { apiScope } = this.state;
         apiScope[id] = value;
         this.setState({ apiScope });
