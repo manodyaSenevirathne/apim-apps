@@ -111,10 +111,11 @@ function ViewCurl(props) {
                             <span className={classes.command}> -d </span>{' '}
                             {'"grant_type=password&username=Username&password=Password"'}
                             {isAzureAD && (
-                                <span className={classes.command}> -d </span>
-                            )}
-                            {isAzureAD && (
-                                `"scope=api://${consumerKey}/.default"`
+                                <>
+                                    <span className={classes.command}> -d </span>
+                                    {' '}
+                                    {`"scope=api://${consumerKey}/.default"`}
+                                </>
                             )}
                         </div>
                         <div>
@@ -170,10 +171,11 @@ function ViewCurl(props) {
                             <span className={classes.command}> -d </span>{' '}
                             {'"grant_type=client_credentials"'}
                             {isAzureAD && (
-                                <span className={classes.command}> -d </span>
-                            )}
-                            {isAzureAD && (
-                                `"scope=api://${consumerKey}/.default"`
+                                <>
+                                    <span className={classes.command}> -d </span>
+                                    {' '}
+                                    {`"scope=api://${consumerKey}/.default"`}
+                                </>
                             )}
                         </div>
                         <div>
