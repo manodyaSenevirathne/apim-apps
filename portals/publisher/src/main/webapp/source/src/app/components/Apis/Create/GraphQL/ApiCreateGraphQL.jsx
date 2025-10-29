@@ -32,7 +32,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import DefaultAPIForm from 'AppComponents/Apis/Create/Components/DefaultAPIForm';
 import APICreateBase from 'AppComponents/Apis/Create/Components/APICreateBase';
 import { usePublisherSettings } from 'AppComponents/Shared/AppContext';
-
+import Progress from 'AppComponents/Shared/Progress';
 import ProvideGraphQL from './Steps/ProvideGraphQL';
 
 /**
@@ -50,8 +50,9 @@ export default function ApiCreateGraphQL(props) {
     const { data: assistantInfo, settings: assistantSettings,
         multiGateway: assistantMultiGateway } = location.state || {};
     const history = useHistory();
-    const [policies, setPolicies] = useState([]);
-    let { data: settings } = usePublisherSettings();
+    const [allPolicies, setAllPolicies] = useState([]);
+    const { data: settingsData, isLoading } = usePublisherSettings();
+    let settings = settingsData;
 
     if (!settings) {
         settings = assistantSettings;
@@ -63,17 +64,14 @@ export default function ApiCreateGraphQL(props) {
 
     useEffect(() => {
         API.policies('subscription').then((response) => {
-            const allPolicies = response.body.list;
-            if (allPolicies.length === 0) {
+            const policies = response.body.list;
+            if (policies.length === 0) {
                 Alert.info(intl.formatMessage({
                     id: 'Apis.Create.GraphQL.ApiCreateGraphQL.error.policies.not.available',
                     defaultMessage: 'Throttling policies not available. Contact your administrator',
                 }));
-            } else if (allPolicies.filter((p) => p.name === 'Unlimited').length > 0) {
-                setPolicies(['Unlimited']);
-            } else {
-                setPolicies([allPolicies[0].name]);
             }
+            setAllPolicies(policies);
         });
     }, []);
     /**
@@ -185,6 +183,24 @@ export default function ApiCreateGraphQL(props) {
             graphQLInfo: { operations },
         } = apiInputs;
 
+        // Select appropriate subscription policy
+        let policies;
+        if (allPolicies.length === 0) {
+            policies = [];
+        } else {
+            // Helper to check if a policy exists
+            const findPolicy = (policyName) => allPolicies.find((p) => p.name === policyName);
+
+            // Priority: defaultSubscriptionPolicy -> Unlimited -> first available
+            const { defaultSubscriptionPolicy } = settings || {};
+            const selectedPolicy =
+                (defaultSubscriptionPolicy && findPolicy(defaultSubscriptionPolicy)) ||
+                findPolicy('Unlimited') ||
+                allPolicies[0];
+
+            policies = [selectedPolicy.name];
+        }
+
         const additionalProperties = {
             name,
             version,
@@ -243,6 +259,12 @@ export default function ApiCreateGraphQL(props) {
                 console.error(error);
             })
             .finally(() => setCreating(false));
+    }
+
+    if (isLoading) {
+        return (
+            <Progress />
+        )
     }
 
     return (

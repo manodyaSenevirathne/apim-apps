@@ -35,7 +35,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import DefaultAPIForm from 'AppComponents/Apis/Create/Components/DefaultAPIForm';
 import APICreateBase from 'AppComponents/Apis/Create/Components/APICreateBase';
 import { usePublisherSettings } from 'AppComponents/Shared/AppContext';
-
+import Progress from 'AppComponents/Shared/Progress';
 import ProvideWSDL from './Steps/ProvideWSDL';
 
 /**
@@ -49,24 +49,22 @@ export default function ApiCreateWSDL(props) {
     const intl = useIntl();
     const [wizardStep, setWizardStep] = useState(0);
     const { history, multiGateway } = props;
-    const [policies, setPolicies] = useState([]);
-    const { data: settings } = usePublisherSettings();
+    const [allPolicies, setAllPolicies] = useState([]);
+    const { data: settings, isLoading } = usePublisherSettings();
 
     useEffect(() => {
         API.policies('subscription').then((response) => {
-            const allPolicies = response.body.list;
-            if (allPolicies.length === 0) {
+            const policies = response.body.list;
+            if (policies.length === 0) {
                 Alert.info(intl.formatMessage({
                     id: 'Apis.Create.WSDL.ApiCreateWSDL.error.policies.not.available',
                     defaultMessage: 'Throttling policies not available. Contact your administrator',
                 }));
-            } else if (allPolicies.filter((p) => p.name === 'Unlimited').length > 0) {
-                setPolicies(['Unlimited']);
-            } else {
-                setPolicies([allPolicies[0].name]);
             }
+            setAllPolicies(policies);
         });
     }, []);
+
     /**
      *
      * Reduce the events triggered from API input fields to current state
@@ -133,6 +131,25 @@ export default function ApiCreateWSDL(props) {
         const {
             name, version, context, endpoint, type,
         } = apiInputs;
+
+        // Select appropriate subscription policy
+        let policies;
+        if (allPolicies.length === 0) {
+            policies = [];
+        } else {
+            // Helper to check if a policy exists
+            const findPolicy = (policyName) => allPolicies.find((p) => p.name === policyName);
+
+            // Priority: defaultSubscriptionPolicy -> Unlimited -> first available
+            const { defaultSubscriptionPolicy } = settings || {};
+            const selectedPolicy =
+                (defaultSubscriptionPolicy && findPolicy(defaultSubscriptionPolicy)) ||
+                findPolicy('Unlimited') ||
+                allPolicies[0];
+
+            policies = [selectedPolicy.name];
+        }
+
         const additionalProperties = {
             name,
             version,
@@ -178,6 +195,12 @@ export default function ApiCreateWSDL(props) {
                 console.error(error);
             })
             .finally(() => setCreating(false));
+    }
+
+    if (isLoading) {
+        return (
+            <Progress />
+        )
     }
 
     return (
