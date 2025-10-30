@@ -114,8 +114,31 @@ const SampleAPI = (props) => {
         setShowStatus(true);
         const restApi = new API();
 
+        // Validate that defaultSubscriptionPolicy exists in available policies
+        let selectedSubscriptionPolicy = defaultSubscriptionPolicy || 'Unlimited';
+        try {
+            const response = await API.policies('subscription');
+            const allPolicies = response.body.list;
+            if (allPolicies.length > 0) {
+                // Helper to check if a policy exists
+                const findPolicy = (policyName) => allPolicies.find((p) => p.name === policyName);
+
+                // Priority: defaultSubscriptionPolicy -> Unlimited -> first available
+                const policy =
+                    (defaultSubscriptionPolicy && findPolicy(defaultSubscriptionPolicy)) ||
+                    findPolicy('Unlimited') ||
+                    allPolicies[0];
+
+                selectedSubscriptionPolicy = policy.name;
+            } else {
+                selectedSubscriptionPolicy = 'Unlimited'; // Fallback to Unlimited if no policies available
+            }
+        } catch (error) {
+            console.error('Error fetching subscription policies:', error);
+        }
+
         const sampleAPIObj = new API(getSampleAPIData(defaultAdvancePolicy || 'Unlimited',
-            defaultSubscriptionPolicy || 'Unlimited'));
+            selectedSubscriptionPolicy));
         // Creat the sample API -- 1st API call
         const sampleAPI = await taskManager(sampleAPIObj.save(), 'create');
         setNewSampleAPI(sampleAPI);
