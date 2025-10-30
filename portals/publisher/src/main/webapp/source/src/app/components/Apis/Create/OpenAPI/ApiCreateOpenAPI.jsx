@@ -32,8 +32,14 @@ import Alert from 'AppComponents/Shared/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import DefaultAPIForm from 'AppComponents/Apis/Create/Components/DefaultAPIForm';
 import APICreateBase from 'AppComponents/Apis/Create/Components/APICreateBase';
-
+import Progress from 'AppComponents/Shared/Progress';
 import ProvideOpenAPI from './Steps/ProvideOpenAPI';
+
+const getPolicies = async () => {
+    const promisedPolicies = API.policies('subscription');
+    const policies = await promisedPolicies;
+    return policies.body.list;
+};
 
 /**
      *
@@ -83,7 +89,8 @@ export default function ApiCreateOpenAPI(props) {
         multiGateway: assistantMultiGateway } = location.state || {};
     const { history } = props;
     let { multiGateway } = props;
-    let { data: settings } = usePublisherSettings();
+    const { data: settingsData, isLoading } = usePublisherSettings();
+    let settings = settingsData;
 
     if (!settings) {
         settings = assistantSettings;
@@ -152,10 +159,10 @@ export default function ApiCreateOpenAPI(props) {
      *
      * @param {*} params
      */
-    function createAPI() {
+    async function createAPI() {
         setCreating(true);
         const {
-            name, version, context, endpoint, gatewayType, policies, inputValue, inputType,
+            name, version, context, endpoint, gatewayType, inputValue, inputType,
         } = apiInputs;
         let defaultGatewayType;
         if (settings && settings.gatewayTypes.length === 1 && settings.gatewayTypes.includes('Regular')) {
@@ -164,6 +171,29 @@ export default function ApiCreateOpenAPI(props) {
             defaultGatewayType = 'wso2/apk';
         } else {
             defaultGatewayType = 'default';
+        }
+
+        // Fetch and select appropriate subscription policy
+        let policies;
+        const { defaultSubscriptionPolicy } = settings;
+        const allPolicies = await getPolicies();
+        if (allPolicies.length === 0) {
+            Alert.info(intl.formatMessage({
+                id: 'Apis.Create.OpenAPI.ApiCreateOpenAPI.error.policies.not.available',
+                defaultMessage: 'Throttling policies not available. Contact your administrator',
+            }));
+            policies = ['Unlimited']; // Fallback to Unlimited if no policies available
+        } else {
+            // Helper to check if a policy exists
+            const findPolicy = (policyName) => allPolicies.find((p) => p.name === policyName);
+
+            // Priority: defaultSubscriptionPolicy -> Unlimited -> first available
+            const selectedPolicy =
+                (defaultSubscriptionPolicy && findPolicy(defaultSubscriptionPolicy)) ||
+                findPolicy('Unlimited') ||
+                allPolicies[0];
+
+            policies = [selectedPolicy.name];
         }
 
         const additionalProperties = {
@@ -207,6 +237,12 @@ export default function ApiCreateOpenAPI(props) {
                 console.error(error);
             })
             .finally(() => setCreating(false));
+    }
+
+    if (isLoading) {
+        return (
+            <Progress />
+        )
     }
 
     return (
