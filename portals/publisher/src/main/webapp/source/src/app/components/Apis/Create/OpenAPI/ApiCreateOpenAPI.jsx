@@ -182,7 +182,7 @@ export default function ApiCreateOpenAPI(props) {
                 id: 'Apis.Create.OpenAPI.ApiCreateOpenAPI.error.policies.not.available',
                 defaultMessage: 'Throttling policies not available. Contact your administrator',
             }));
-            policies = [];
+            policies = ['Unlimited']; // Fallback to Unlimited if no policies available
         } else {
             // Helper to check if a policy exists
             const findPolicy = (policyName) => allPolicies.find((p) => p.name === policyName);

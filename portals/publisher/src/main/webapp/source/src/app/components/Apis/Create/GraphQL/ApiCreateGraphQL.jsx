@@ -186,7 +186,7 @@ export default function ApiCreateGraphQL(props) {
         // Select appropriate subscription policy
         let policies;
         if (allPolicies.length === 0) {
-            policies = [];
+            policies = ['Unlimited']; // Fallback to Unlimited if no policies available
         } else {
             // Helper to check if a policy exists
             const findPolicy = (policyName) => allPolicies.find((p) => p.name === policyName);
