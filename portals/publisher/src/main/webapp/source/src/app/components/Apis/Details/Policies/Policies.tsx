@@ -98,7 +98,7 @@ const Policies: React.FC = () => {
     const [expandedResource, setExpandedResource] = useState<string | null>(null);
     const [isChoreoConnectEnabled, setIsChoreoConnectEnabled] = useState(api.gatewayType !== 'wso2/synapse');
     const { showMultiVersionPolicies } = Configurations.apis;
-    const [selectedTab, setSelectedTab] = useState((api.apiPolicies != null) ? 0 : 1);
+    const [selectedTab, setSelectedTab] = useState(api.type === 'GRAPHQL' || api.apiPolicies != null ? 0 : 1);
     const [gateway, setGateway] = useState<string>("");
 
     // If Choreo Connect radio button is selected in GatewaySelector, it will pass 
@@ -229,7 +229,7 @@ const Policies: React.FC = () => {
             let filteredApiPoliciesByAPITypeList = [];
             let filteredCommonPoliciesByAPITypeList = [];
 
-            if (api.type === "HTTP" || api.type === "SOAP" || api.type === "SOAPTOREST") {
+            if (api.type === "HTTP" || api.type === "SOAP" || api.type === "SOAPTOREST" || api.type === "GRAPHQL" || api.type === "WS") {
                 // Get API policies based on the API type
                 filteredApiPoliciesByAPITypeList = filteredApiPolicyByGatewayTypeList.filter((policy: Policy) => {
                     return policy.supportedApiTypes.some((item: any) => {
@@ -294,28 +294,47 @@ const Policies: React.FC = () => {
 
     useEffect(() => {
         // Update the Swagger spec object when API object gets changed
-        api.getSwagger()
-            .then((response: any) => {
-                const retrievedSpec = response.body;
-                setOpenAPISpec(retrievedSpec);
+        if (api.type != 'WS'){
+            api.getSwagger()
+                .then((response: any) => {
+                    const retrievedSpec = response.body;
+                    setOpenAPISpec(retrievedSpec);
 
-                // To expand the first operation by default on page render
-                const [target, verbObject]: [string, any] = Object.entries(retrievedSpec.paths)[0];
-                const verb = Object.keys(verbObject)[0]
-                setExpandedResource(verb + target)
-            })
-            .catch((error: any) => {
-                console.error(error);
-                if (error.response) {
-                    Alert.error(error.response.body.description);
-                }
-            });
+                    // To expand the first operation by default on page render
+                    const [target, verbObject]: [string, any] = Object.entries(retrievedSpec.paths)[0];
+                    const verb = Object.keys(verbObject)[0]
+                    setExpandedResource(verb + target)
+                })
+                .catch((error: any) => {
+                    console.error(error);
+                    if (error.response) {
+                        Alert.error(error.response.body.description);
+                    }
+                });
+        } else {
+            api.getAsyncAPIDefinition(api.id)
+                .then((response: any) => {
+                    const retrievedSpec = response.body;
+                    setOpenAPISpec(retrievedSpec);            
+
+                    // The verb (subscribe/publish) is ignored for websocket apis
+                    const [target, verbObject]: [string, any] = Object.entries(retrievedSpec.channels)[0];
+                    setExpandedResource(target)
+                })
+                .catch((error: any) => {
+                    console.error(error);
+                    if (error.response) {
+                        Alert.error(error.response.body.description);
+                    }
+                });
+        }
     }, [api.id]);
 
     const localAPI = useMemo(
         () => ({
             id: api.id,
             operations: api.isAPIProduct() ? {} : mapAPIOperations(api.operations),
+            type: api.type,
         }),
         [api],
     );
@@ -334,41 +353,56 @@ const Policies: React.FC = () => {
         const newApiOperations: any = cloneDeep(apiOperations);
         const newApiLevelPolicies: any = cloneDeep(apiLevelPolicies);
 
+        // For websocket APIs, as the verb is ignored, at most two operations (sub and pub) have the same target path
+        // For other API types, the target + verb combination is unique
         const operationInAction =
             selectedTab === operationLevelTab
-                ? newApiOperations.find(
+                ? newApiOperations.filter(
                     (op: any) =>
-                        op.target === target &&
-                            op.verb.toLowerCase() === verb.toLowerCase(),
+                        api.type === 'WS'
+                            ? op.target === target
+                            : op.target === target && op.verb.toLowerCase() === verb.toLowerCase(),
                 )
                 : null;
 
-        const flowPolicy = (
-            selectedTab === apiLevelTab
-                ? newApiLevelPolicies
-                : operationInAction.operationPolicies
-        )[currentFlow].find(
-            (p: any) =>
-                p.policyId === updatedOperation.policyId &&
-                p.uuid === updatedOperation.uuid,
-        );
-        
-
-        if (flowPolicy) {
-            // Edit policy
-            flowPolicy.parameters = { ...updatedOperation.parameters };
-        } else {
-            // Add new policy
-            const uuid = uuidv4();
-            (selectedTab === apiLevelTab ? newApiLevelPolicies : operationInAction
-                .operationPolicies)[currentFlow].push({ ...updatedOperation, uuid }
-            );
-        }
-
-        // Finally update the state
         if (selectedTab === apiLevelTab) {
+            const flow = newApiLevelPolicies[currentFlow];
+            const existingPolicy = flow.find(
+                (p: any) =>
+                    p.policyId === updatedOperation.policyId &&
+                    p.uuid === updatedOperation.uuid,
+            );
+
+            if (existingPolicy) {
+                existingPolicy.parameters = { ...updatedOperation.parameters };
+            } else {
+                const uuid = uuidv4();
+                flow.push({
+                    ...updatedOperation,
+                    uuid,
+                });
+            }
             setApiLevelPolicies(newApiLevelPolicies);
         } else {
+            operationInAction.forEach((op: any) => {
+                const flow = op.operationPolicies?.[currentFlow];
+                if (!flow) return;
+
+                const existingPolicy = flow.find(
+                    (p: any) =>
+                        p.policyId === updatedOperation.policyId &&
+                        p.uuid === updatedOperation.uuid,
+                );
+
+                if (existingPolicy) {
+                    existingPolicy.parameters = { ...updatedOperation.parameters };
+                } else {
+                    flow.push({
+                        ...updatedOperation,
+                        uuid: uuidv4(),
+                    });
+                }
+            });
             setApiOperations(newApiOperations);
         }
     }
@@ -409,16 +443,40 @@ const Policies: React.FC = () => {
             setApiLevelPolicies(newApiLevelPolicies);
         } else {
             const newApiOperations: any = cloneDeep(apiOperations);
-            const operationInAction = newApiOperations.find((op: any) =>
-                op.target === target && op.verb.toLowerCase() === verb.toLowerCase());
+            const operationInAction = newApiOperations.filter(
+                (op: any) =>
+                    api.type === 'WS'
+                        ? op.target === target
+                        : op.target === target && op.verb.toLowerCase() === verb.toLowerCase(),
+            )
             // Find the location of the element using the following logic
             /*
             [{a:'1'},{a:'2'},{a:'1'}].map( i => i.a) will output ['1', '2', '1']
             [{a:'1'},{a:'2'},{a:'1'}].map( i => i.a).indexOf('2') will output the location of '2'
             */
-            const index = operationInAction.operationPolicies[currentFlow].map((p: any) => p.uuid).indexOf(uuid);
-            // delete the element
-            operationInAction.operationPolicies[currentFlow].splice(index, 1);
+            if (operationInAction.length > 1) {
+                // In websocket apis, policy should be deleted from both subscribe and publish operations
+                const referencePolicy = operationInAction[0].operationPolicies[currentFlow]
+                    .find((p: any) => p.uuid === uuid);
+
+                if (referencePolicy) {
+                    const referencePolicyId = referencePolicy.policyId;
+
+                    operationInAction.forEach((op: any) => {
+                        const policyList = op.operationPolicies[currentFlow];
+                        const targetIndex = policyList.findIndex((p: any) => p.policyId === referencePolicyId);
+
+                        if (targetIndex !== -1) {
+                            policyList.splice(targetIndex, 1);
+                        }
+                    });
+                }
+            } else {
+                operationInAction.forEach((op: any) => {
+                    const index = op.operationPolicies[currentFlow].map((p: any) => p.uuid).indexOf(uuid);
+                    op.operationPolicies[currentFlow].splice(index, 1);
+                });
+            }
 
             // Finally update the state
             setApiOperations(newApiOperations);
@@ -443,10 +501,15 @@ const Policies: React.FC = () => {
             setApiLevelPolicies(newAPIPolicies);
         } else {
             const newApiOperations: any = cloneDeep(apiOperations);
-            const operationInAction = newApiOperations.find((op: any) =>
-                op.target === target && op.verb.toLowerCase() === verb.toLowerCase());
-            const policyArray = operationInAction.operationPolicies[currentFlow];
-            operationInAction.operationPolicies[currentFlow] = arrayMove(policyArray, oldIndex, newIndex);
+            const operationInAction = newApiOperations.filter(
+                (op: any) =>
+                    api.type === 'WS'
+                        ? op.target === target
+                        : op.target === target && op.verb.toLowerCase() === verb.toLowerCase());
+                operationInAction.forEach((operation: any) => {
+                    const policyArray = operation.operationPolicies[currentFlow];
+                    operation.operationPolicies[currentFlow] = arrayMove(policyArray, oldIndex, newIndex);
+                });
             setApiOperations(newApiOperations);
         }
     };
@@ -556,72 +619,130 @@ const Policies: React.FC = () => {
                     <Box width='65%' p={1} className={classes.operationListingBox}>
                         <Paper className={classes.paper}>
                             <Box p={1}>
-                                <Tabs
-                                    value={selectedTab}
-                                    onChange={(event, tab) =>
-                                        handleTabChange(tab)
-                                    }
-                                    indicatorColor='primary'
-                                    textColor='primary'
-                                    variant='fullWidth'
-                                    aria-label='Policies local to API'
-                                    className={classes.flowTabs}
-                                >
-                                    <Tab
-                                        label={
-                                            <span className={classes.flowTab}>
-                                                <FormattedMessage
-                                                    id='Apis.Details.Policies.tab.api.level'
-                                                    defaultMessage='API Level Policies'
-                                                />
-                                            </span>
+                                {api.type === 'GRAPHQL' ? (
+                                    <>
+                                    <Tabs
+                                        value={selectedTab}
+                                        onChange={(event, tab) =>
+                                            handleTabChange(tab)
                                         }
-                                        id='api-level-policies-tab'
-                                        aria-controls='api-level-policies-tabpanel'
-                                    />
-                                    <Tab
-                                        label={
-                                            <span className={classes.flowTab}>
-                                                <FormattedMessage
-                                                    id='Apis.Details.Policies.tab.operation.level'
-                                                    defaultMessage='Operation Level Policies'
-                                                />
-                                            </span>
+                                        indicatorColor='primary'
+                                        textColor='primary'
+                                        variant='fullWidth'
+                                        aria-label='Policies local to API'
+                                        className={classes.flowTabs}
+                                    >
+                                        <Tab
+                                            label={
+                                                <span className={classes.flowTab}>
+                                                    <FormattedMessage
+                                                        id='Apis.Details.Policies.Policies.api.level.policies'
+                                                        defaultMessage='API Level Policies'
+                                                    />
+                                                </span>
+                                            }
+                                            id='api-level-policies-tab'
+                                            aria-controls='api-level-policies-tabpanel'
+                                        />
+                                        <Tab
+                                            label={
+                                                <span className={classes.flowTab}>
+                                                    <FormattedMessage
+                                                        id='Apis.Details.Policies.Policies.operation.level.policies'
+                                                        defaultMessage='Operation Level Policies'
+                                                    />
+                                                </span>
+                                            }
+                                            id='operation-level-policies-tab'
+                                            aria-controls='operation-level-policies-tabpanel'
+                                            disabled={true}
+                                        />
+                                    </Tabs>
+                                    <Box pt={1} overflow='scroll'>
+                                        <PolicyPanel
+                                            index={apiLevelTab}
+                                            selectedTab={apiLevelTab}
+                                            openAPISpec={openAPISpec}
+                                            isChoreoConnectEnabled={isChoreoConnectEnabled}
+                                            isAPILevelTabSelected
+                                            allPolicies={allPolicies}
+                                            policyList={policies}
+                                            api={localAPI}
+                                            expandedResource={expandedResource}
+                                            setExpandedResource={setExpandedResource}
+                                        />
+                                    </Box>
+                                    </>
+                                ) : (
+                                    <>
+                                    <Tabs
+                                        value={selectedTab}
+                                        onChange={(event, tab) =>
+                                            handleTabChange(tab)
                                         }
-                                        id='operation-level-policies-tab'
-                                        aria-controls='operation-level-policies-tabpanel'
-                                    />
-                                </Tabs>
-                                <Box pt={1} overflow='scroll'>
-                                    <PolicyPanel
-                                        index={apiLevelTab}
-                                        selectedTab={selectedTab}
-                                        openAPISpec={openAPISpec}
-                                        isChoreoConnectEnabled={isChoreoConnectEnabled}
-                                        isAPILevelTabSelected
-                                        allPolicies={allPolicies}
-                                        policyList={policies}
-                                        api={localAPI}
-                                        expandedResource={expandedResource}
-                                        setExpandedResource={
-                                            setExpandedResource
-                                        }
-                                    />
-                                    <PolicyPanel
-                                        index={operationLevelTab}
-                                        selectedTab={selectedTab}
-                                        openAPISpec={openAPISpec}
-                                        isChoreoConnectEnabled={isChoreoConnectEnabled}
-                                        isAPILevelTabSelected={false}
-                                        allPolicies={allPolicies}
-                                        policyList={policies}
-                                        api={localAPI}
-                                        expandedResource={expandedResource}
-                                        setExpandedResource={
-                                            setExpandedResource
-                                        }
-                                    />
-                                </Box>
+                                        indicatorColor='primary'
+                                        textColor='primary'
+                                        variant='fullWidth'
+                                        aria-label='Policies local to API'
+                                        className={classes.flowTabs}
+                                    >
+                                        <Tab
+                                            label={
+                                                <span className={classes.flowTab}>
+                                                    <FormattedMessage
+                                                        id='Apis.Details.Policies.Policies.api.level.policies'
+                                                        defaultMessage='API Level Policies'
+                                                    />
+                                                </span>
+                                            }
+                                            id='api-level-policies-tab'
+                                            aria-controls='api-level-policies-tabpanel'
+                                        />
+                                        <Tab
+                                            label={
+                                                <span className={classes.flowTab}>
+                                                    <FormattedMessage
+                                                        id='Apis.Details.Policies.Policies.operation.level.policies'
+                                                        defaultMessage='Operation Level Policies'
+                                                    />
+                                                </span>
+                                            }
+                                            id='operation-level-policies-tab'
+                                            aria-controls='operation-level-policies-tabpanel'
+                                        />
+                                    </Tabs>
+                                    <Box pt={1} overflow='scroll'>
+                                        <PolicyPanel
+                                            index={apiLevelTab}
+                                            selectedTab={selectedTab}
+                                            openAPISpec={openAPISpec}
+                                            isChoreoConnectEnabled={isChoreoConnectEnabled}
+                                            isAPILevelTabSelected
+                                            allPolicies={allPolicies}
+                                            policyList={policies}
+                                            api={localAPI}
+                                            expandedResource={expandedResource}
+                                            setExpandedResource={
+                                                setExpandedResource
+                                            }
+                                        />
+                                        <PolicyPanel
+                                            index={operationLevelTab}
+                                            selectedTab={selectedTab}
+                                            openAPISpec={openAPISpec}
+                                            isChoreoConnectEnabled={isChoreoConnectEnabled}
+                                            isAPILevelTabSelected={false}
+                                            allPolicies={allPolicies}
+                                            policyList={policies}
+                                            api={localAPI}
+                                            expandedResource={expandedResource}
+                                            setExpandedResource={
+                                                setExpandedResource
+                                            }
+                                        />
+                                    </Box>
+                                    </>
+                                )}
                             </Box>
                         </Paper>
                     </Box>
@@ -632,6 +753,7 @@ const Policies: React.FC = () => {
                             fetchPolicies={fetchPolicies}
                             isChoreoConnectEnabled={isChoreoConnectEnabled}
                             gatewayType={gateway}
+                            apiType={api.type}
                         />
                     </Box>
                 </Box>

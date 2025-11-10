@@ -149,6 +149,8 @@ const ViewPolicy: React.FC<ViewPolicyProps> = ({
                         <PolicyViewForm
                             policySpec={policySpec}
                             onDone={toggleOpen}
+                            apiType={api.type}
+                            isLocalToAPI={isLocalToAPI}
                         />
                     </DialogContentText>
                 </Box>
