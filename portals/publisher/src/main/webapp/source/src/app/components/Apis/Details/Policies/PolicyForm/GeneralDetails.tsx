@@ -59,6 +59,7 @@ interface GeneralDetailsProps {
     supportedApiTypes: string[] | ApiTypeObject[];
     dispatch?: React.Dispatch<any>;
     isViewMode: boolean;
+    isLocalToAPI: boolean;
 }
 
 /**
@@ -74,6 +75,7 @@ const GeneralDetails: FC<GeneralDetailsProps> = ({
     supportedApiTypes,
     dispatch,
     isViewMode,
+    isLocalToAPI
 }) => {
 
     const intl = useIntl();
@@ -124,14 +126,39 @@ const GeneralDetails: FC<GeneralDetailsProps> = ({
      * @param {React.ChangeEvent<HTMLInputElement>} event event
      */
     const handleApiTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, checked } = event.target;
         if (dispatch) {
-            dispatch({
-                type: ACTIONS.UPDATE_SUPPORTED_API_TYPES,
-                name: event.target.name,
-                checked: event.target.checked,
-            });
+            if (name === 'WS' && checked) {
+                dispatch({
+                    type: ACTIONS.SET_SUPPORTED_API_TYPES,
+                    payload: ['WS'],
+                });
+                dispatch({
+                    type: ACTIONS.SET_APPLICABLE_FLOWS,
+                    payload: ['request']
+                });
+            } else if (name === 'WS' && !checked) {
+                dispatch({
+                    type: ACTIONS.REMOVE_SUPPORTED_API_TYPE,
+                    payload: 'WS',
+                });
+            } else if (isWebsocketSelected) {
+                // Don't allow other types to be selected while WS is selected
+                return;
+            } else {
+                dispatch({
+                    type: ACTIONS.UPDATE_SUPPORTED_API_TYPES,
+                    name,
+                    checked,
+                });
+            }
         }
     };
+
+    const isWebsocketSelected =
+        Array.isArray(supportedApiTypes) &&
+        supportedApiTypes.every((item) => typeof item === 'string') &&
+        supportedApiTypes.includes('WS');
 
     return (
         <StyledBox display='flex' flexDirection='row' mt={1}>
@@ -283,58 +310,80 @@ const GeneralDetails: FC<GeneralDetailsProps> = ({
                                 error={applicableFlowsError}
                             >
                                 <FormGroup className={classes.formGroup}>
-                                    <FormControlLabel
-                                        control={
-                                            <Checkbox
-                                                name='request'
-                                                color='primary'
-                                                checked={applicableFlows.includes(
-                                                    'request',
-                                                )}
-                                                onChange={handleChange}
+                                    {!isWebsocketSelected ? (
+                                        <>
+                                            <FormControlLabel
+                                                control={
+                                                    <Checkbox
+                                                        name='request'
+                                                        color='primary'
+                                                        checked={applicableFlows.includes(
+                                                            'request',
+                                                        )}
+                                                        onChange={handleChange}
+                                                    />
+                                                }
+                                                label={intl.formatMessage({
+                                                    id: 'Apis.Details.Policies.PolicyForm.GeneralDetails.form.flow.type.request',
+                                                    defaultMessage: 'Request',
+                                                })}
+                                                data-testid='request-flow'
                                             />
-                                        }
-                                        label={intl.formatMessage({
-                                            id: 'Apis.Details.Policies.PolicyForm.GeneralDetails.form.flow.type.request',
-                                            defaultMessage: 'Request',
-                                        })}
-                                        data-testid='request-flow'
-                                    />
-                                    <FormControlLabel
-                                        control={
-                                            <Checkbox
-                                                name='response'
-                                                color='primary'
-                                                checked={applicableFlows.includes(
-                                                    'response',
-                                                )}
-                                                onChange={handleChange}
+                                            <FormControlLabel
+                                                control={
+                                                    <Checkbox
+                                                        name='response'
+                                                        color='primary'
+                                                        checked={applicableFlows.includes(
+                                                            'response',
+                                                        )}
+                                                        onChange={handleChange}
+                                                    />
+                                                }
+                                                label={intl.formatMessage({
+                                                    id: 'Apis.Details.Policies.PolicyForm.GeneralDetails.form.flow.type.response',
+                                                    defaultMessage: 'Response',
+                                                })}
+                                                data-testid='response-flow'
                                             />
-                                        }
-                                        label={intl.formatMessage({
-                                            id: 'Apis.Details.Policies.PolicyForm.GeneralDetails.form.flow.type.response',
-                                            defaultMessage: 'Response',
-                                        })}
-                                        data-testid='response-flow'
-                                    />
-                                    <FormControlLabel
-                                        control={
-                                            <Checkbox
-                                                name='fault'
-                                                color='primary'
-                                                id='fault-select-check-box'
-                                                checked={applicableFlows.includes(
-                                                    'fault',
-                                                )}
-                                                onChange={handleChange}
+                                            <FormControlLabel
+                                                control={
+                                                    <Checkbox
+                                                        name='fault'
+                                                        color='primary'
+                                                        id='fault-select-check-box'
+                                                        checked={applicableFlows.includes(
+                                                            'fault',
+                                                        )}
+                                                        onChange={handleChange}
+                                                    />
+                                                }
+                                                label={intl.formatMessage({
+                                                    id: 'Apis.Details.Policies.PolicyForm.GeneralDetails.form.flow.type.fault',
+                                                    defaultMessage: 'Fault',
+                                                })}
+                                                data-testid='fault-flow'
                                             />
-                                        }
-                                        label={intl.formatMessage({
-                                            id: 'Apis.Details.Policies.PolicyForm.GeneralDetails.form.flow.type.fault',
-                                            defaultMessage: 'Fault',
-                                        })}
-                                        data-testid='fault-flow'
-                                    />
+                                        </>
+                                    ):(
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    name='fault'
+                                                    color='primary'
+                                                    id='fault-select-check-box'
+                                                    checked={true}
+                                                    onChange={handleChange}
+                                                    disabled={true}
+                                                />
+                                            }
+                                            label={intl.formatMessage({
+                                                id: 'Apis.Details.Policies.PolicyForm.GeneralDetails.form.flow.type.inbound',
+                                                defaultMessage: 'Inbound Handshake',
+                                            })}
+                                            data-testid='inbound-flow'
+                                        />
+                                    )}
                                 </FormGroup>
                                 <FormHelperText>
                                     {applicableFlowsError
@@ -344,95 +393,131 @@ const GeneralDetails: FC<GeneralDetailsProps> = ({
                             </FormControl>
                         </Box>
                     </Box>
-                    <Box display='flex' flexDirection='row' alignItems='center'>
-                        <Typography
-                            color='inherit'
-                            variant='body1'
-                            component='div'
-                        >
-                            <FormattedMessage
-                                id='Apis.Details.Policies.PolicyForm.GeneralDetails.form.supported.api.label'
-                                defaultMessage='Supported API Types'
-                            />
-                            <sup className={classes.mandatoryStar}>*</sup>
-                        </Typography>
-                        <Box
-                            flex='1'
-                            display='flex'
-                            flexDirection='row-reverse'
-                            justifyContent='space-around'
-                        >
-                            <FormControl
-                                required
-                                component='fieldset'
-                                variant='standard'
-                                margin='normal'
-                                error={supportedApiTypesError}
+                    {!isLocalToAPI && (
+                        <Box display='flex' flexDirection='row' alignItems='center'>
+                            <Typography
+                                color='inherit'
+                                variant='body1'
+                                component='div'
                             >
-                                <FormGroup className={classes.formGroup}>
-                                    <FormControlLabel
-                                        control={
-                                            <Checkbox
-                                                name='HTTP'
-                                                color='primary'
-                                                checked={
-                                                    Array.isArray(supportedApiTypes) &&
-                                                    supportedApiTypes.some(
-                                                        item =>
-                                                            (typeof item === 'string' && item === 'HTTP') ||
-                                                            (typeof item === 'object' && item !== null && item.apiType === 'HTTP')
-                                                    )                                            
-                                                }
-                                                id='http-select-check-box'
-                                                onChange={handleApiTypeChange}
-                                            />
-                                        }
-                                        label='HTTP'
-                                        data-testid='http-type'
-                                    />
-                                    <FormControlLabel
-                                        control={
-                                            <Checkbox
-                                                name='SOAP'
-                                                color='primary'
-                                                checked={
-                                                    Array.isArray(supportedApiTypes) &&
-                                                    supportedApiTypes.every(item => typeof item === 'string') &&
-                                                    supportedApiTypes.includes('SOAP')
-                                                }
-                                                id='soap-select-check-box'
-                                                onChange={handleApiTypeChange}
-                                            />
-                                        }
-                                        label='SOAP'
-                                        data-testid='soap-type'
-                                    />
-                                    <FormControlLabel
-                                        control={
-                                            <Checkbox
-                                                name='SOAPTOREST'
-                                                color='primary'
-                                                checked={
-                                                    Array.isArray(supportedApiTypes) &&
-                                                    supportedApiTypes.every(item => typeof item === 'string') &&
-                                                    supportedApiTypes.includes('SOAPTOREST')
-                                                }
-                                                id='soaptorest-select-check-box'
-                                                onChange={handleApiTypeChange}
-                                            />
-                                        }
-                                        label='SOAPTOREST'
-                                        data-testid='soaptorest-flow'
-                                    />
-                                </FormGroup>
-                                <FormHelperText>
-                                    {supportedApiTypesError
-                                        ? 'Please select one or more API Types'
-                                        : ''}
-                                </FormHelperText>
-                            </FormControl>
+                                <FormattedMessage
+                                    id='Apis.Details.Policies.PolicyForm.GeneralDetails.form.supported.api.label'
+                                    defaultMessage='Supported API Types'
+                                />
+                                <sup className={classes.mandatoryStar}>*</sup>
+                            </Typography>
+                            <Box
+                                flex='1'
+                                display='flex'
+                                flexDirection='row-reverse'
+                                justifyContent='space-around'
+                            >
+                                <FormControl
+                                    required
+                                    component='fieldset'
+                                    variant='standard'
+                                    margin='normal'
+                                    error={supportedApiTypesError}
+                                >
+                                    <FormGroup className={classes.formGroup} sx={{paddingLeft:'22px'}}>
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    name='HTTP'
+                                                    color='primary'
+                                                    checked={
+                                                        Array.isArray(supportedApiTypes) &&
+                                                        supportedApiTypes.some(
+                                                            item =>
+                                                                (typeof item === 'string' && item === 'HTTP') ||
+                                                                (typeof item === 'object' && item !== null && item.apiType === 'HTTP')
+                                                        )                                            
+                                                    }
+                                                    id='http-select-check-box'
+                                                    onChange={handleApiTypeChange}
+                                                    disabled={isWebsocketSelected}
+                                                />
+                                            }
+                                            label='HTTP'
+                                            data-testid='http-type'
+                                        />
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    name='SOAP'
+                                                    color='primary'
+                                                    checked={
+                                                        Array.isArray(supportedApiTypes) &&
+                                                        supportedApiTypes.every(item => typeof item === 'string') &&
+                                                        supportedApiTypes.includes('SOAP')
+                                                    }
+                                                    id='soap-select-check-box'
+                                                    onChange={handleApiTypeChange}
+                                                    disabled={isWebsocketSelected}
+                                                />
+                                            }
+                                            label='SOAP'
+                                            data-testid='soap-type'
+                                        />
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    name='SOAPTOREST'
+                                                    color='primary'
+                                                    checked={
+                                                        Array.isArray(supportedApiTypes) &&
+                                                        supportedApiTypes.every(item => typeof item === 'string') &&
+                                                        supportedApiTypes.includes('SOAPTOREST')
+                                                    }
+                                                    id='soaptorest-select-check-box'
+                                                    onChange={handleApiTypeChange}
+                                                    disabled={isWebsocketSelected}
+                                                />
+                                            }
+                                            label='SOAPTOREST'
+                                            data-testid='soaptorest-flow'
+                                        />
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    name='GRAPHQL'
+                                                    color='primary'
+                                                    checked={
+                                                        Array.isArray(supportedApiTypes) &&
+                                                        supportedApiTypes.every(item => typeof item === 'string') &&
+                                                        supportedApiTypes.includes('GRAPHQL')
+                                                    }
+                                                    id='graphql-select-check-box'
+                                                    onChange={handleApiTypeChange}
+                                                    disabled={isWebsocketSelected}
+                                                />
+                                            }
+                                            label='GRAPHQL'
+                                            data-testid='graphql-type'
+                                        />
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    name='WS'
+                                                    color='primary'
+                                                    checked={isWebsocketSelected}
+                                                    id='ws-select-check-box'
+                                                    onChange={handleApiTypeChange}
+                                                />
+                                            }
+                                            label='WEBSOCKET'
+                                            data-testid='ws-flow'
+                                        />
+                                    </FormGroup>
+                                    <FormHelperText>
+                                        {supportedApiTypesError
+                                            ? 'Please select one or more API Types'
+                                            : ''}
+                                    </FormHelperText>
+                                </FormControl>
+                            </Box>
                         </Box>
-                    </Box>
+                    )}
                 </Box>
             </Box>
         </StyledBox>

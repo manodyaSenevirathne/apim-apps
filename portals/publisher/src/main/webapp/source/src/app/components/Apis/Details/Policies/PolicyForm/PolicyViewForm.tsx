@@ -48,6 +48,8 @@ const StyledPaper = styled(Paper)(() => ({
 interface PolicyViewFormProps {
     policySpec: PolicySpec;
     onDone: () => void;
+    apiType?: string;
+    isLocalToAPI: boolean;
 }
 
 /**
@@ -55,7 +57,7 @@ interface PolicyViewFormProps {
  * @param {JSON} props Input props from parent components.
  * @returns {TSX} Right drawer for policy configuration.
  */
-const PolicyViewForm: FC<PolicyViewFormProps> = ({ policySpec, onDone }) => {
+const PolicyViewForm: FC<PolicyViewFormProps> = ({ policySpec, onDone, apiType, isLocalToAPI }) => {
 
 
     const getPolicyAttributes = () => {
@@ -77,6 +79,7 @@ const PolicyViewForm: FC<PolicyViewFormProps> = ({ policySpec, onDone }) => {
                 applicableFlows={policySpec.applicableFlows}
                 supportedApiTypes={policySpec.supportedApiTypes}
                 isViewMode
+                isLocalToAPI={isLocalToAPI}
             />
             <Divider />
             {/* Gateway specific details of policy */}
@@ -92,14 +95,16 @@ const PolicyViewForm: FC<PolicyViewFormProps> = ({ policySpec, onDone }) => {
                 policyAttributes={getPolicyAttributes()}
                 isViewMode
             />
-            <Box>
-                <Button variant='contained' color='primary' data-testid='done-view-policy-file' onClick={onDone}>
-                    <FormattedMessage
-                        id='Apis.Details.Policies.PolicyForm.PolicyViewForm.done'
-                        defaultMessage='Done'
-                    />
-                </Button>
-            </Box>
+            {!apiType && (
+                <Box>
+                    <Button variant='contained' color='primary' data-testid='done-view-policy-file' onClick={onDone}>
+                        <FormattedMessage
+                            id='Apis.Details.Policies.PolicyForm.PolicyViewForm.done'
+                            defaultMessage='Done'
+                        />
+                    </Button>
+                </Box>
+            )}
         </StyledPaper>
     );
 };

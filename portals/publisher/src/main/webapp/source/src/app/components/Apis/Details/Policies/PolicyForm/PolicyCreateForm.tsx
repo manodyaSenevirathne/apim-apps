@@ -62,6 +62,9 @@ export const ACTIONS = {
     ADD_POLICY_ATTRIBUTE: 'addPolicyAttribute',
     UPDATE_POLICY_ATTRIBUTE: 'updatePolicyAttribute',
     DELETE_POLICY_ATTRIBUTE: 'deletePolicyAttribute',
+    SET_APPLICABLE_FLOWS: 'setApplicableFlows',
+    SET_SUPPORTED_API_TYPES: 'setSupportedApiTypes',
+    REMOVE_SUPPORTED_API_TYPE: 'removeSupportedApiType',
 };
 
 /**
@@ -151,6 +154,26 @@ function policyReducer(state: NewPolicyState, action: any) {
                 ),
             };
         }
+        case ACTIONS.SET_SUPPORTED_API_TYPES: {
+            return {
+                ...state,
+                supportedApiTypes: action.payload,
+            };
+        }
+        case ACTIONS.REMOVE_SUPPORTED_API_TYPE: {
+            return {
+                ...state,
+                supportedApiTypes: state.supportedApiTypes.filter(
+                    (apiType: string) => apiType !== action.payload,
+                ),
+            };
+        }
+        case ACTIONS.SET_APPLICABLE_FLOWS: {
+            return {
+                ...state,
+                applicableFlows: action.payload,
+            };
+        }
         default:
             return state;
     }
@@ -164,6 +187,7 @@ interface PolicyCreateFormProps {
     setCcPolicyDefinitionFile: React.Dispatch<React.SetStateAction<any[]>>;
     onCancel: () => void;
     saving: boolean;
+    apiType?: string;
 }
 
 /**
@@ -179,14 +203,15 @@ const PolicyCreateForm: FC<PolicyCreateFormProps> = ({
     setCcPolicyDefinitionFile,
     onCancel,
     saving,
+    apiType,
 }) => {
 
     const initialState: NewPolicyState = {
         displayName: null,
         version: null,
         description: '',
-        applicableFlows: ['request', 'response', 'fault'],
-        supportedApiTypes: ['HTTP'],
+        applicableFlows: apiType === 'WS' ? ['request'] : ['request', 'response', 'fault'],
+        supportedApiTypes: apiType ? [apiType] : ['HTTP'],
         supportedGateways: ['Synapse'],
         policyAttributes: [],
     };
@@ -297,6 +322,7 @@ const PolicyCreateForm: FC<PolicyCreateFormProps> = ({
                 supportedApiTypes={state.supportedApiTypes}
                 dispatch={dispatch}
                 isViewMode={false}
+                isLocalToAPI={apiType ? true : false}
             />
             <Divider />
             {/* Gateway specific details of policy */}
