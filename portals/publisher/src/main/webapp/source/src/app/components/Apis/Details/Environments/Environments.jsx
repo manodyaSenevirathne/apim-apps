@@ -442,7 +442,6 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
 
     [`& .${classes.dialogPaper}`]: {
         width: '800px',
-        maxHeight: '800px',
     },
 
     [`& .${classes.cardHeight}`]: {
