@@ -181,7 +181,7 @@ export default function KeyManager(props) {
                             <FormLabel component='legend'>
                                 <FormattedMessage
                                     id='Apis.Details.Configuration.components.KeyManager.more.than.one.info'
-                                    defaultMessage='Select one or more Key Managers'
+                                    defaultMessage='Select one or more valid and enabled Key Managers'
                                 />
                             </FormLabel>
                             <FormGroup
@@ -194,12 +194,18 @@ export default function KeyManager(props) {
                                             <Checkbox
                                                 color='primary'
                                                 checked={keyManagers.includes(key.name)}
-                                                disabled={!key.enabled}
+                                                disabled={!keyManagers.includes(key.name) && !key.enabled}
                                                 onChange={handleChange}
                                                 name={key.name}
                                             />
                                         )}
-                                        label={key.displayName || key.name}
+                                        label={(
+                                            <Typography 
+                                                color={!key.enabled ? "textSecondary" : "inherit"}
+                                            >
+                                                {key.displayName || key.name}
+                                            </Typography>
+                                        )}
                                     />
                                 ))}
                             </FormGroup>
