@@ -33,7 +33,6 @@ import WarningIcon from '@mui/icons-material/Warning';
 import PropTypes from 'prop-types';
 import { styled } from '@mui/material/styles';
 import { isRestricted } from 'AppData/AuthManager';
-import API from 'AppData/api';
 import { useHistory } from 'react-router-dom';
 
 const PREFIX = 'EndpointCard';
@@ -99,44 +98,47 @@ const EndpointCard = ({
     onDelete,
     onSetPrimary,
     onRemovePrimary,
+    llmProviderEndpointConfiguration,
 }) => {
     const history = useHistory();
 
     const isSolePrimaryEndpoint = !apiObject.primaryProductionEndpointId || !apiObject.primarySandboxEndpointId;
 
-    const endpointUrl =
-        endpoint.deploymentStage === 'PRODUCTION'
+    const getEndpointUrl = () => {
+        return endpoint.deploymentStage === 'PRODUCTION'
             ? endpoint.endpointConfig?.production_endpoints?.url
             : endpoint.endpointConfig?.sandbox_endpoints?.url;
+    }
+
+    const getEndpointName = () => {
+        return endpoint.name || 'No Name Configured';
+    }
 
     const renderEndpointSecurityWarning = () => {
-        const endpointSecurity =
-            endpoint.deploymentStage === 'PRODUCTION'
-                ? endpoint.endpointConfig?.endpoint_security?.production
-                : endpoint.endpointConfig?.endpoint_security?.sandbox;
+        if (llmProviderEndpointConfiguration?.authHeader || llmProviderEndpointConfiguration?.authQueryParameter) {
+            const endpointSecurity =
+                endpoint.deploymentStage === 'PRODUCTION'
+                    ? endpoint.endpointConfig?.endpoint_security?.production
+                    : endpoint.endpointConfig?.endpoint_security?.sandbox;
 
-        if (!endpointSecurity) {
-            return (
-                <Tooltip title='Configure API Key security for this endpoint'>
-                    <Chip
-                        icon={<WarningIcon />}
-                        label='API Key Required'
-                        size='small'
-                        variant='outlined'
-                        className={classes.warningChip}
-                        onClick={() => {
-                            const urlPrefix =
-                                apiObject.apiType === API.CONSTS.APIProduct
-                                    ? 'api-products'
-                                    : 'apis';
-                            history.push(
-                                `/${urlPrefix}/${apiObject.id}/endpoints/${endpoint.id}`,
-                            );
-                        }}
-                        sx={{ my: '4px' }}
-                    />
-                </Tooltip>
-            );
+            // API Key warning
+            if (!endpointSecurity) {
+                return (
+                    <Tooltip title='Configure API Key security for this endpoint'>
+                        <Chip
+                            icon={<WarningIcon />}
+                            label='API Key Required'
+                            size='small'
+                            variant='outlined'
+                            className={classes.warningChip}
+                            onClick={() => {
+                                history.push(`/apis/${apiObject.id}/endpoints/${endpoint.id}`);
+                            }}
+                            sx={{ my: '4px' }}
+                        />
+                    </Tooltip>
+                );
+            }
         }
         return null;
     };
@@ -149,7 +151,7 @@ const EndpointCard = ({
             <CardContent className={classes.cardContent}>
                 <div className={classes.endpointInfo}>
                     <Typography variant='subtitle1'>
-                        {endpoint.name}
+                        {getEndpointName()}
                         {isPrimary && (
                             <Chip
                                 label='Primary'
@@ -160,7 +162,7 @@ const EndpointCard = ({
                         )}
                     </Typography>
                     <Typography variant='body2' className={classes.endpointUrl}>
-                        {endpointUrl}
+                        {getEndpointUrl()}
                     </Typography>
                 </div>
                 <CardActions className={classes.cardActions}>
@@ -215,13 +217,7 @@ const EndpointCard = ({
                     <IconButton
                         size='small'
                         onClick={() => {
-                            const urlPrefix =
-                                apiObject.apiType === API.CONSTS.APIProduct
-                                    ? 'api-products'
-                                    : 'apis';
-                            history.push(
-                                `/${urlPrefix}/${apiObject.id}/endpoints/${endpoint.id}`,
-                            );
+                            history.push(`/apis/${apiObject.id}/endpoints/${endpoint.id}`);
                         }}
                         disabled={isRestricted(['apim:api_create'], apiObject)}
                     >
@@ -285,6 +281,10 @@ EndpointCard.propTypes = {
     onDelete: PropTypes.func.isRequired,
     onSetPrimary: PropTypes.func.isRequired,
     onRemovePrimary: PropTypes.func.isRequired,
+    llmProviderEndpointConfiguration: PropTypes.shape({
+        authHeader: PropTypes.bool,
+        authQueryParameter: PropTypes.bool,
+    }).isRequired,
 };
 
 export default EndpointCard;

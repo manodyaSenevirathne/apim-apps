@@ -39,6 +39,8 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
 
 const AIEndpoints = ({
     apiObject,
+    onChangeAPI,
+    llmProviderEndpointConfiguration,
 }) => {
     const [productionEndpoints, setProductionEndpoints] = useState([]);
     const [sandboxEndpoints, setSandboxEndpoints] = useState([]);
@@ -105,7 +107,7 @@ const AIEndpoints = ({
 
     useEffect(() => {
         fetchEndpoints();
-    }, []);
+    }, [apiObject.id]);
 
     const handleDelete = (endpoint) => {
         // Check if endpoint is primary
@@ -152,7 +154,6 @@ const AIEndpoints = ({
                     setSandboxEndpoints(prev => prev.filter(ep => ep.id !== endpoint.id));
                 }
 
-
                 Alert.success(intl.formatMessage({
                     id: 'Apis.Details.Endpoints.AIEndpoints.AIEndpoints.endpoint.delete.success',
                     defaultMessage: 'Endpoint deleted successfully',
@@ -170,6 +171,21 @@ const AIEndpoints = ({
             });
     };
 
+    // Helper function to handle onChangeAPI calls
+    const handleAPIChange = (endpoint, updatedApi) => {
+        if (endpoint.deploymentStage === 'PRODUCTION') {
+            onChangeAPI({
+                action: 'set_primary_production_endpoint',
+                value: updatedApi.primaryProductionEndpointId
+            });
+        } else {
+            onChangeAPI({
+                action: 'set_primary_sandbox_endpoint',
+                value: updatedApi.primarySandboxEndpointId
+            });
+        }
+    };
+
     const handleSetAsPrimary = (endpoint) => {
         // Create a deep copy of the API object to avoid direct mutations
         const updatedApi = {
@@ -184,6 +200,7 @@ const AIEndpoints = ({
                     id: 'Apis.Details.Endpoints.AIEndpoints.AIEndpoints.primary.set.success',
                     defaultMessage: 'Primary endpoint updated successfully',
                 }));
+                handleAPIChange(endpoint, updatedApi);
             })
             .catch((error) => {
                 console.error(error);
@@ -215,6 +232,7 @@ const AIEndpoints = ({
                     id: 'Apis.Details.Endpoints.AIEndpoints.AIEndpoints.primary.update.success',
                     defaultMessage: 'Primary endpoint updated successfully',
                 }));
+                handleAPIChange(endpoint, updatedApi);
             })
             .catch((error) => {
                 console.error(error);
@@ -250,6 +268,7 @@ const AIEndpoints = ({
                                 onDelete={handleDelete}
                                 onSetPrimary={handleSetAsPrimary}
                                 onRemovePrimary={handleRemovePrimary}
+                                llmProviderEndpointConfiguration={llmProviderEndpointConfiguration}
                             />
                         ))
                     ) : (
@@ -281,6 +300,7 @@ const AIEndpoints = ({
                                 onDelete={handleDelete}
                                 onSetPrimary={handleSetAsPrimary}
                                 onRemovePrimary={handleRemovePrimary}
+                                llmProviderEndpointConfiguration={llmProviderEndpointConfiguration}
                             />
                         ))
                     ) : (
@@ -325,6 +345,11 @@ AIEndpoints.propTypes = {
                 sandbox: PropTypes.bool,
             }),
         }),
+    }).isRequired,
+    onChangeAPI: PropTypes.func.isRequired,
+    llmProviderEndpointConfiguration: PropTypes.shape({
+        authHeader: PropTypes.bool,
+        authQueryParameter: PropTypes.bool,
     }).isRequired,
 }
 

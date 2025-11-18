@@ -118,7 +118,7 @@ const defaultSwagger = { paths: {} };
  * @returns {any} HTML representation.
  */
 function Endpoints(props) {
-    const {  intl, history } = props;
+    const {  intl, history, llmProviderEndpointConfiguration } = props;
     const { data: publisherSettings, isLoading } = usePublisherSettings();
     const { api, updateAPI } = useContext(APIContext);
     const { settings } = useAppContext();
@@ -129,24 +129,8 @@ function Endpoints(props) {
     const [productionBackendList, setProductionBackendList] = useState([]);
     const [isValidSequenceBackend, setIsValidSequenceBackend] = useState(false);
     const [isCustomBackendSelected, setIsCustomBackendSelected] = useState(false);
-    const [apiKeyParamConfig, setApiKeyParamConfig] = useState({
-        authHeader: null,
-        authQueryParameter: null
-    });
     const [componentValidator, setComponentValidator] = useState([]);
     const [endpointSecurityTypes, setEndpointSecurityTypes] = useState([]);
-
-    useEffect(() => {
-        if (api.subtypeConfiguration?.subtype === 'AIAPI') {
-            API.getLLMProviderEndpointConfiguration(JSON.parse(api.subtypeConfiguration.configuration).llmProviderId)
-                .then((response) => {
-                    if (response.body) {
-                        const config = response.body;
-                        setApiKeyParamConfig(config);
-                    }
-                });
-        }
-    }, []);
 
     useEffect(() => {
         if (!isLoading) {
@@ -577,7 +561,7 @@ function Endpoints(props) {
             }
         } else if ((!endpointConfig || !endpointConfig.endpoint_security)
             && apiObject.subtypeConfiguration?.subtype === 'AIAPI'
-            && (apiKeyParamConfig.authHeader || apiKeyParamConfig.authQueryParameter)) {
+            && (llmProviderEndpointConfiguration?.authHeader || llmProviderEndpointConfiguration?.authQueryParameter)) {
             return {
                 isValid: false,
                 message: intl.formatMessage({
@@ -802,7 +786,7 @@ function Endpoints(props) {
                                 onChangeAPI={apiDispatcher}
                                 endpointsDispatcher={apiDispatcher}
                                 saveAndRedirect={saveAndRedirect}
-                                apiKeyParamConfig={apiKeyParamConfig}
+                                llmProviderEndpointConfiguration={llmProviderEndpointConfiguration}
                             />
                         ))}
                         {(api.subtypeConfiguration?.subtype !== 'AIAPI') && (
@@ -824,7 +808,6 @@ function Endpoints(props) {
                                             setIsValidSequenceBackend={setIsValidSequenceBackend}
                                             isCustomBackendSelected={isCustomBackendSelected}
                                             setIsCustomBackendSelected={setIsCustomBackendSelected}
-                                            apiKeyParamConfig={apiKeyParamConfig}
                                             componentValidator={componentValidator}
                                             endpointSecurityTypes={endpointSecurityTypes}
                                         />
@@ -906,6 +889,10 @@ Endpoints.propTypes = {
     api: PropTypes.shape({}).isRequired,
     intl: PropTypes.shape({}).isRequired,
     history: PropTypes.shape({}).isRequired,
+    llmProviderEndpointConfiguration: PropTypes.shape({
+        authHeader: PropTypes.bool,
+        authQueryParameter: PropTypes.bool,
+    }).isRequired,
 };
 
 export default withRouter(injectIntl((Endpoints)));
