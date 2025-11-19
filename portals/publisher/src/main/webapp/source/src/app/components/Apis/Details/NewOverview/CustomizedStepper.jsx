@@ -27,6 +27,7 @@ import { grey } from '@mui/material/colors';
 import styled from '@emotion/styled';
 import IconButton from '@mui/material/IconButton';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { checkEndpointStatus } from 'AppComponents/Shared/Utils';
 
 const PREFIX = 'CustomizedStepper';
 
@@ -161,12 +162,12 @@ export default function CustomizedStepper() {
     const [isUpdating, setUpdating] = useState(false);
     const [isMandatoryPropertiesAvailable, setIsMandatoryPropertiesAvailable] = useState(false);
     const [deploymentsAvailable, setDeploymentsAvailable] = useState(false);
-    const [isEndpointSecurityConfigured, setIsEndpointSecurityConfigured] = useState(false);
+    const [endpointStatus, setEndpointStatus] = useState({
+        isEndpointReady: false,
+        isLoading: true
+    });
     const isPrototypedAvailable = api.apiType !== API.CONSTS.APIProduct && api.endpointConfig !== null
         && api.endpointConfig.implementation_status === 'prototyped';
-    const isEndpointAvailable = api.subtypeConfiguration?.subtype === 'AIAPI'
-        ? (api.primaryProductionEndpointId !== null || api.primarySandboxEndpointId !== null)
-        : api.endpointConfig !== null;
     const isTierAvailable = api.policies.length !== 0;
     const lifecycleState = api.isAPIProduct() ? api.state : api.lifeCycleStatus;
     const isPublished = lifecycleState === 'PUBLISHED';
@@ -218,21 +219,45 @@ export default function CustomizedStepper() {
             });
     }
 
+    const handleEndpointStatusCheck = async () => {
+        setEndpointStatus(prev => ({ ...prev, isLoading: true }));
+
+        try {
+            let isEndpointReady = false;
+            isEndpointReady = await checkEndpointStatus(api);
+
+            setEndpointStatus({
+                isEndpointReady,
+                isLoading: false
+            });
+        } catch (error) {
+            console.error('Error checking endpoint status:', error);
+            setEndpointStatus({
+                isEndpointReady: false,
+                isLoading: false
+            });
+        }
+    };
+
+    useEffect(() => {
+        handleEndpointStatusCheck();
+    }, [api]);
+
     if (isPublished) {
         forceComplete.push(steps.indexOf('Publish') + 1);
     }
     let activeStep = 0;
-    if (api && (api.type === 'WEBSUB' || isEndpointAvailable)
+    if (api && (api.type === 'WEBSUB' || endpointStatus.isEndpointReady)
         && !deploymentsAvailable) {
         activeStep = 1;
-    } else if ((api && !isEndpointAvailable && api.type !== 'WEBSUB')
+    } else if ((api && !endpointStatus.isEndpointReady && api.type !== 'WEBSUB')
         || (api && !isMutualSslOnly && !isTierAvailable)) {
         activeStep = 0;
-    } else if (api && (isEndpointAvailable || api.type === 'WEBSUB') && (isTierAvailable || isMutualSslOnly)
+    } else if (api && (endpointStatus.isEndpointReady || api.type === 'WEBSUB') && (isTierAvailable || isMutualSslOnly)
         && deploymentsAvailable && (!isPublished && lifecycleState !== 'PROTOTYPED')) {
         activeStep = steps.length - 1;
     } else if ((isPublished || lifecycleState === 'PROTOTYPED') && api
-        && (isEndpointAvailable || api.type === 'WEBSUB' || isPrototypedAvailable)
+        && (endpointStatus.isEndpointReady || api.type === 'WEBSUB' || isPrototypedAvailable)
         && (isTierAvailable || isMutualSslOnly) && deploymentsAvailable) {
         activeStep = steps.length;
     }
@@ -261,53 +286,12 @@ export default function CustomizedStepper() {
         validateMandatoryCustomProperties();
     }, []);
 
-    useEffect(() => {
-        const checkEndpointSecurity = async () => {
-            try {
-                const hasProductionEndpoint = !!api.primaryProductionEndpointId;
-                const hasSandboxEndpoint = !!api.primarySandboxEndpointId;
-                let isProductionSecure = false;
-                let isSandboxSecure = false;
-
-                if (hasProductionEndpoint) {
-                    if (api.primaryProductionEndpointId === CONSTS.DEFAULT_ENDPOINT_ID.PRODUCTION) {
-                        isProductionSecure = !!api.endpointConfig?.endpoint_security?.production;
-                    } else {
-                        const endpoint = await API.getApiEndpoint(api.id, api.primaryProductionEndpointId);
-                        isProductionSecure = !!endpoint?.body?.endpointConfig?.endpoint_security?.production;
-                    }
-                }
-
-                if (hasSandboxEndpoint) {
-                    if (api.primarySandboxEndpointId === CONSTS.DEFAULT_ENDPOINT_ID.SANDBOX) {
-                        isSandboxSecure = !!api.endpointConfig?.endpoint_security?.sandbox;
-                    } else {
-                        const endpoint = await API.getApiEndpoint(api.id, api.primarySandboxEndpointId);
-                        isSandboxSecure = !!endpoint?.body?.endpointConfig?.endpoint_security?.sandbox;
-                    }
-                }
-
-                if (hasProductionEndpoint && hasSandboxEndpoint) {
-                    setIsEndpointSecurityConfigured(isProductionSecure && isSandboxSecure);
-                } else if (hasProductionEndpoint) {
-                    setIsEndpointSecurityConfigured(isProductionSecure);
-                } else if (hasSandboxEndpoint) {
-                    setIsEndpointSecurityConfigured(isSandboxSecure);
-                } else {
-                    setIsEndpointSecurityConfigured(false);
-                }
-            } catch (error) {
-                console.error('Error checking endpoint security:', error);
-                setIsEndpointSecurityConfigured(false);
-            }
-        };
-        checkEndpointSecurity();
-    }, [api]);
-
     /**
- * Update the LifeCycle state of the API
- *
- */
+     * Update the LifeCycle state of the API
+     *
+     * @param {string} apiId - The ID of the API
+     * @param {string} state - The new lifecycle state
+     */
     function updateLCStateOfAPI(apiId, state) {
         setUpdating(true);
         const promisedUpdate = api.updateLcState(apiId, state);
@@ -517,7 +501,7 @@ export default function CustomizedStepper() {
                                     color='primary'
                                     data-testid='publish-state-button'
                                     onClick={() => updateLCStateOfAPI(api.id, 'Publish')}
-                                    disabled={((api.type !== 'WEBSUB' && !isEndpointAvailable)
+                                    disabled={((api.type !== 'WEBSUB' && !endpointStatus.isEndpointReady)
                                         || (!isMutualSslOnly && !isTierAvailable))
                                         || !deploymentsAvailable
                                         || api.isRevision || AuthManager.isNotPublisher()
@@ -555,17 +539,11 @@ export default function CustomizedStepper() {
         }
     }
     const isTestLinkDisabled = lifecycleState === 'RETIERD' || !deploymentsAvailable
-    || (!api.isAPIProduct() && !isEndpointAvailable)
+    || (!api.isAPIProduct() && !endpointStatus.isEndpointReady)
     || (!isMutualSslOnly && !isTierAvailable)
     || (api.type !== 'HTTP' && api.type !== 'SOAP' && api.type !== 'APIPRODUCT');
     const isDeployLinkDisabled =
-        (api.type !== 'WEBSUB' &&
-            !(
-                isEndpointAvailable &&
-                (api.subtypeConfiguration?.subtype === 'AIAPI'
-                    ? isEndpointSecurityConfigured
-                    : true)
-            )) ||
+        (api.type !== 'WEBSUB' && !endpointStatus.isEndpointReady) ||
         api.workflowStatus === 'CREATED' ||
         lifecycleState === 'RETIRED';
     let deployLinkToolTipTitle = '';
@@ -579,6 +557,15 @@ export default function CustomizedStepper() {
             id: 'Apis.Details.Overview.CustomizedStepper.ToolTip.DeploymentUnavailable',
             defaultMessage: 'Deploy a revision of this API to the Gateway',
         });
+    }
+
+
+    if (endpointStatus.isLoading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                <CircularProgress />
+            </Box>
+        );
     }
 
     return (
@@ -628,11 +615,7 @@ export default function CustomizedStepper() {
                                                     style={{ marginLeft: '2px' }}
                                                 >
                                                     <Grid item>
-                                                        {isEndpointAvailable && (
-                                                            api.subtypeConfiguration?.subtype === 'AIAPI'
-                                                                ? isEndpointSecurityConfigured
-                                                                : true
-                                                        ) 
+                                                        {endpointStatus.isEndpointReady
                                                             ? (
                                                                 <CheckIcon className={classes.iconTrue} />
                                                             ) 
