@@ -231,6 +231,7 @@ function endpointReducer(state, { field, value }) {
 
 const AddEditAIEndpoint = ({
     apiObject,
+    llmProviderEndpointConfiguration,
     match: { params: { id: endpointId } },
 }) => {
     const [isEndpointValid, setIsEndpointValid] = useState();
@@ -249,10 +250,6 @@ const AddEditAIEndpoint = ({
             endpoint_type: 'http',
             endpoint_security: {},
         }
-    });
-    const [apiKeyParamConfig, setApiKeyParamConfig] = useState({
-        authHeader: null,
-        authQueryParameter: null
     });
     const [isEndpointSaving, setEndpointSaving] = useState(false);
     const iff = (condition, then, otherwise) => (condition ? then : otherwise);
@@ -327,8 +324,8 @@ const AddEditAIEndpoint = ({
 
                 // Set API key value
                 const envType = isProd ? 'production' : 'sandbox';
-                const apiKeyConfig = endpointConfig.endpoint_security?.[envType];
-                if (apiKeyConfig?.apiKeyValue === '') {
+                const securityConfig = endpointConfig.endpoint_security?.[envType];
+                if (securityConfig?.apiKeyValue === '') {
                     setApiKeyValue('********');
                 }
             } else {
@@ -347,8 +344,8 @@ const AddEditAIEndpoint = ({
 
                         // Set API key value
                         const envType = body.deploymentStage === "PRODUCTION" ? 'production' : 'sandbox';
-                        const apiKeyConfig = body.endpointConfig.endpoint_security?.[envType];
-                        if (apiKeyConfig?.apiKeyValue === '') {
+                        const securityConfig = body.endpointConfig.endpoint_security?.[envType];
+                        if (securityConfig?.apiKeyValue === '') {
                             setApiKeyValue('********');
                         }
                     })
@@ -419,11 +416,25 @@ const AddEditAIEndpoint = ({
         }
 
         const isProduction = state.deploymentStage === CONSTS.DEPLOYMENT_STAGE.production;
+        let type;
+        let apiKeyIdentifier;
+        let apiKeyIdentifierType;
+        if (llmProviderEndpointConfiguration?.authHeader) {
+            type = 'apikey';
+            apiKeyIdentifier = llmProviderEndpointConfiguration?.authHeader;
+            apiKeyIdentifierType = 'HEADER';
+        } else if (llmProviderEndpointConfiguration?.authQueryParameter) {
+            type = 'apikey';
+            apiKeyIdentifier = llmProviderEndpointConfiguration?.authQueryParameter;
+            apiKeyIdentifierType = 'QUERY_PARAMETER';
+        } else {
+            type = 'none';
+        }
         saveEndpointSecurityConfig({
             ...CONSTS.DEFAULT_ENDPOINT_SECURITY,
-            type: 'apikey',
-            apiKeyIdentifier: apiKeyParamConfig.authHeader || apiKeyParamConfig.authQueryParam,
-            apiKeyIdentifierType: apiKeyParamConfig.authHeader ? 'HEADER' : 'QUERY_PARAMETER',
+            type,
+            apiKeyIdentifier,
+            apiKeyIdentifierType,
             apiKeyValue: updatedApiKeyValue,
             enabled: true,
         }, isProduction ? 'production' : 'sandbox');
@@ -437,19 +448,6 @@ const AddEditAIEndpoint = ({
 
     const urlPrefix = apiObject.apiType === API.CONSTS.APIProduct ? 'api-products' : 'apis';
     const url = `/${urlPrefix}/${apiObject.id}/endpoints`;
-
-    useEffect(() => {
-        if (apiObject.subtypeConfiguration?.subtype === 'AIAPI') {
-            API.getLLMProviderEndpointConfiguration(
-                JSON.parse(apiObject.subtypeConfiguration.configuration).llmProviderId)
-                .then((response) => {
-                    if (response.body) {
-                        const config = response.body;
-                        setApiKeyParamConfig(config);
-                    }
-                });
-        }
-    }, []);
 
     useEffect(() => {
         try {
@@ -539,11 +537,15 @@ const AddEditAIEndpoint = ({
                 }
                 return false;
             case 'apiKey':
-                if (!fieldValue) {
-                    return intl.formatMessage({
-                        id: 'Apis.Details.Endpoints.AIEndpoints.AddEditAIEndpoint.error.empty.apiKey',
-                        defaultMessage: 'API Key cannot be empty',
-                    });
+                if (
+                    llmProviderEndpointConfiguration?.authHeader || llmProviderEndpointConfiguration?.authQueryParameter
+                ) {
+                    if (!fieldValue) {
+                        return intl.formatMessage({
+                            id: 'Apis.Details.Endpoints.AIEndpoints.AddEditAIEndpoint.error.empty.apiKey',
+                            defaultMessage: 'API Key cannot be empty',
+                        });
+                    }
                 }
                 return false;
             default:
@@ -727,6 +729,14 @@ const AddEditAIEndpoint = ({
         return true;
     };
 
+    // Add this before the return statement, after all hooks and state
+    const apiKeyParamConfig = {
+        authHeader: llmProviderEndpointConfiguration?.authHeader,
+        authQueryParam: llmProviderEndpointConfiguration?.authQueryParameter
+    };
+    const IS_APIKEY_AUTH_ENABLED = (config) =>
+        config?.authHeader || config?.authQueryParameter;
+
     return (
         <StyledGrid container justifyContent='center'>
             <Grid item sm={12} md={12} lg={8}>
@@ -904,66 +914,77 @@ const AddEditAIEndpoint = ({
                                 </FormControl>
                             </Grid>
                             {/* AI Endpoint Auth Fields */}
-                            <Grid item xs={6}>
-                                <TextField
-                                    disabled
-                                    label={apiKeyParamConfig.authHeader ? (
-                                        <FormattedMessage
-                                            id='Apis.Details.Endpoints.AIEndpoints.AddEditAIEndpoint.api.key.header'
-                                            defaultMessage='Authorization Header'
+                            {IS_APIKEY_AUTH_ENABLED(llmProviderEndpointConfiguration) && (
+                                <>
+                                    <Grid item xs={6}>
+                                        <TextField
+                                            disabled
+                                            label={apiKeyParamConfig.authHeader ? (
+                                                <FormattedMessage
+                                                    id='Apis.Details.Endpoints.AIEndpoints.Edit.api.key.header'
+                                                    defaultMessage='Authorization Header'
+                                                />
+                                            ) : (
+                                                <FormattedMessage
+                                                    id='Apis.Details.Endpoints.AIEndpoints.Edit.api.key.query.param'
+                                                    defaultMessage='Authorization Query Param'
+                                                />
+                                            )}
+                                            fullWidth
+                                            id='api-key-id'
+                                            value={apiKeyParamConfig.authHeader ||
+                                                apiKeyParamConfig.authQueryParam}
+                                            placeholder={apiKeyParamConfig.authHeader ||
+                                                apiKeyParamConfig.authQueryParam}
+                                            InputLabelProps={{
+                                                shrink: true,
+                                            }}
+                                            helperText=' '
+                                            required
                                         />
-                                    ) : (
-                                        <FormattedMessage
-                                            id={'Apis.Details.Endpoints.AIEndpoints.AddEditAIEndpoint.' +
-                                                'api.key.query.param'}
-                                            defaultMessage='Authorization Query Param'
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <TextField
+                                            disabled={isRestricted(['apim:api_create'], apiObject)}
+                                            label={
+                                                <FormattedMessage
+                                                    id='Apis.Details.Endpoints.AIEndpoints.Edit.api.key.value'
+                                                    defaultMessage='API Key'
+                                                />
+                                            }
+                                            id='api-key-value'
+                                            value={apiKeyValue}
+                                            placeholder={intl.formatMessage({
+                                                id: 'Apis.Details.Endpoints.AIEndpoints.Edit.api.key.placeholder',
+                                                defaultMessage: 'Enter API Key',
+                                            })}
+                                            fullWidth
+                                            onChange={handleApiKeyChange}
+                                            onBlur={handleApiKeyBlur}
+                                            error={hasErrors('apiKey', apiKeyValue, validating)}
+                                            helperText={hasErrors('apiKey', apiKeyValue, validating)}
+                                            required
+                                            type={showApiKey ? 'text' : 'password'}
+                                            InputLabelProps={{
+                                                shrink: Boolean(apiKeyValue),
+                                            }}
+                                            InputProps={{
+                                                endAdornment: (
+                                                    <InputAdornment position='end'>
+                                                        <IconButton
+                                                            onClick={handleToggleApiKeyVisibility}
+                                                            edge='end'
+                                                        >
+                                                            {showApiKey ? <VisibilityIcon /> : <VisibilityOffIcon />}
+                                                        </IconButton>
+                                                    </InputAdornment>
+                                                ),
+                                            }}
                                         />
-                                    )}
-                                    fullWidth
-                                    id='api-key-id'
-                                    value={apiKeyParamConfig.authHeader || apiKeyParamConfig.authQueryParam}
-                                    placeholder={apiKeyParamConfig.authHeader || apiKeyParamConfig.authQueryParam}
-                                    InputLabelProps={{
-                                        shrink: true,
-                                    }}
-                                    helperText=' '
-                                    required
-                                />
-                            </Grid>
-                            <Grid item xs={6}>
-                                <TextField
-                                    disabled={isRestricted(['apim:api_create'], apiObject)}
-                                    label={<FormattedMessage
-                                        id='Apis.Details.Endpoints.AIEndpoints.AddEditAIEndpoint.api.key.value'
-                                        defaultMessage='API Key'
-                                    />}
-                                    id='api-key-value'
-                                    value={apiKeyValue}
-                                    placeholder={intl.formatMessage({
-                                        id: 'Apis.Details.Endpoints.AIEndpoints.AddEditAIEndpoint.api.key.placeholder',
-                                        defaultMessage: 'Enter API Key',
-                                    })}
-                                    fullWidth
-                                    onChange={handleApiKeyChange}
-                                    onBlur={handleApiKeyBlur}
-                                    error={hasErrors('apiKey', apiKeyValue, validating)}
-                                    helperText={hasErrors('apiKey', apiKeyValue, validating)}
-                                    required
-                                    type={showApiKey ? 'text' : 'password'}
-                                    InputLabelProps={{
-                                        shrink: Boolean(apiKeyValue),
-                                    }}
-                                    InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position='end'>
-                                                <IconButton onClick={handleToggleApiKeyVisibility} edge='end'>
-                                                    {showApiKey ? <VisibilityIcon /> : <VisibilityOffIcon />}
-                                                </IconButton>
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                />
-                            </Grid>
+                                    </Grid>
+                                </>
+                            )}
+
                         </Grid>
 
                         {/* Action Buttons */}
@@ -1053,6 +1074,10 @@ AddEditAIEndpoint.propTypes = {
             key: PropTypes.string,
             value: PropTypes.string,
         }).isRequired,
+    }).isRequired,
+    llmProviderEndpointConfiguration: PropTypes.shape({
+        authHeader: PropTypes.bool,
+        authQueryParameter: PropTypes.bool,
     }).isRequired,
     match: PropTypes.shape({
         params: PropTypes.shape({
