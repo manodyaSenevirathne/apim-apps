@@ -28,7 +28,7 @@
     "author": "WSO2 Org",
     "license": "Apache-2.0",
     "dependencies": {
-        "@asyncapi/react-component": "^2.6.3",
+        "@asyncapi/react-component": "2.6.3",
         "@emotion/react": "^11.11.3",
         "@emotion/styled": "^11.11.0",
         "@graphiql/plugin-explorer": "^3.0.3",
@@ -162,6 +162,32 @@
     "overrides": {
         "react-syntax-highlighter": {
             "prismjs": "1.30.0"
+        },
+        "@asyncapi/react-component": {
+            ".": "2.6.3",
+            "@asyncapi/avro-schema-parser": "3.0.24",
+            "@asyncapi/openapi-schema-parser": "3.0.24",
+            "@asyncapi/parser": {
+                ".": "3.4.0",
+                "@asyncapi/specs": "6.8.1"
+            },
+            "@asyncapi/protobuf-schema-parser": "3.5.1"
+        },
+        "@asyncapi/avro-schema-parser": {
+            ".": "3.0.24",
+            "@asyncapi/parser": "3.4.0"
+        },
+        "@asyncapi/openapi-schema-parser": {
+            ".": "3.0.24",
+            "@asyncapi/parser": "3.4.0"
+        },
+        "@asyncapi/protobuf-schema-parser": {
+            ".": "3.5.1",
+            "@asyncapi/parser": "3.4.0"
+        },
+        "@asyncapi/parser": {
+            ".": "3.4.0",
+            "@asyncapi/specs": "6.8.1"
         }
     }
 }
