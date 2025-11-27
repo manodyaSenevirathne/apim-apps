@@ -33,8 +33,8 @@
     "dependencies": {
         "@apidevtools/json-schema-ref-parser": "^11.6.4",
         "@apidevtools/swagger-parser": "^10.1.0",
-        "@asyncapi/parser": "^3.0.10",
-        "@asyncapi/react-component": "^2.6.3",
+        "@asyncapi/parser": "3.4.0",
+        "@asyncapi/react-component": "2.6.3",
         "@dnd-kit/core": "^6.0.8",
         "@dnd-kit/sortable": "^7.0.2",
         "@dnd-kit/utilities": "^3.2.1",
@@ -48,7 +48,7 @@
         "@mui/x-charts": "^7.24.0",
         "@stoplight/elements": "^8.5.2",
         "@stoplight/spectral-core": "^1.18.3",
-        "@stoplight/spectral-rulesets": "^1.19.1",
+        "@stoplight/spectral-rulesets": "1.22.0",
         "async-mutex": "^0.5.0",
         "autosuggest-highlight": "^3.3.4",
         "base64url": "3.0.1",
@@ -177,6 +177,33 @@
     "overrides": {
         "react-syntax-highlighter": {
             "prismjs": "1.30.0"
+        },
+        "@asyncapi/react-component": {
+            ".": "2.6.3",
+            "@asyncapi/avro-schema-parser": "3.0.24",
+            "@asyncapi/openapi-schema-parser": "3.0.24",
+            "@asyncapi/parser": "3.4.0",
+            "@asyncapi/protobuf-schema-parser": "3.5.1"
+        },
+        "@asyncapi/avro-schema-parser": {
+            ".": "3.0.24",
+            "@asyncapi/parser": "3.4.0"
+        },
+        "@asyncapi/openapi-schema-parser": {
+            ".": "3.0.24",
+            "@asyncapi/parser": "3.4.0"
+        },
+        "@asyncapi/protobuf-schema-parser": {
+            ".": "3.5.1",
+            "@asyncapi/parser": "3.4.0"
+        },
+        "@asyncapi/parser": {
+            ".": "3.4.0",
+            "@asyncapi/specs": "6.8.1"
+        },
+        "@stoplight/spectral-rulesets": {
+            ".": "1.22.0",
+            "@asyncapi/specs": "6.8.1"
         }
     }
 }
