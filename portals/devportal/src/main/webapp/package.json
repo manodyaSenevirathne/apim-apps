@@ -45,7 +45,7 @@
         "ajv": "^8.12.0",
         "async-mutex": "^0.5.0",
         "autosuggest-highlight": "^3.3.4",
-        "axios": "^0.30.0",
+        "axios": "1.13.2",
         "base64url": "3.0.1",
         "btoa": "^1.2.1",
         "caniuse-api": "^3.0.0",
@@ -95,7 +95,7 @@
         "react-tagcloud": "^2.3.1",
         "remark-gfm": "^3.0.1",
         "stream-browserify": "^3.0.0",
-        "swagger-client": "^3.34.4",
+        "swagger-client": "3.36.0",
         "swagger-ui-react": "^5.21.0",
         "url": "^0.11.3",
         "xml-formatter": "^3.6.2"
