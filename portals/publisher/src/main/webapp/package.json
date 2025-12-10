@@ -97,7 +97,7 @@
         "remark-gfm": "^3.0.1",
         "rich-textarea": "^0.26.4",
         "sourcemapped-stacktrace": "^1.1.11",
-        "swagger-client": "^3.34.4",
+        "swagger-client": "3.36.0",
         "swagger-ui-react": "^5.21.0",
         "url": "^0.11.3",
         "url-loader": "^4.1.1",
