@@ -72,7 +72,7 @@
             }
 
             if (!isHostValid) {
-                log.warn("Blocked request with untrusted host header: " + forwarded_for);
+                log.warn("Blocked request with untrusted host header: " + forwarded_for.replaceAll("[\r\n]", ""));
                 response.setStatus(400);
                 response.setContentType("text/html");
                 out.println("<html><head></head><body><h2>Error 400 : Bad Request</h2><br/><p>"+
