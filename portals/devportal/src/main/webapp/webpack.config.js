@@ -255,7 +255,7 @@ module.exports = function (env, argv) {
                 ],
             }),
             new MonacoWebpackPlugin({
-                languages: ['json'],
+                languages: ['json', 'graphql'],
             }),
         ],
     };

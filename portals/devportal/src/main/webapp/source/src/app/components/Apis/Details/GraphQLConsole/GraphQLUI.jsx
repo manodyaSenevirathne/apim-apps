@@ -22,7 +22,6 @@ import React, {
 import { styled } from '@mui/material';
 import { GraphiQL, HISTORY_PLUGIN } from 'graphiql';
 import './graphiql.css'; // Styles for GraphiQL
-import 'graphiql/setup-workers/webpack';
 import PropTypes from 'prop-types';
 import Box from '@mui/material/Box';
 import { createGraphiQLFetcher } from '@graphiql/toolkit';
