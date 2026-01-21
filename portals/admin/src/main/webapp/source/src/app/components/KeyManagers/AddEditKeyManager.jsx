@@ -280,6 +280,10 @@ function AddEditKeyManager(props) {
             });
     };
     const updateKeyManagerConnectorConfiguration = (keyManagerType) => {
+        if (keyManagerType === 'tokenExchange') {
+            setEnableDirectToken(false);
+            setEnableExchangeToken(true);
+        }
         if (settings.keyManagerConfiguration) {
             settings.keyManagerConfiguration.map(({
                 type: key, defaultConsumerKeyClaim, defaultScopesClaim, configurations, authConfigurations,
@@ -881,8 +885,12 @@ function AddEditKeyManager(props) {
                                                         {keymanager.displayName || keymanager.type}
                                                     </MenuItem>
                                                 ))}
-                                            <MenuItem key='other' value='other' id='Admin.KeyManager.form.type.menu'>
-                                                {'Other' || 'other'}
+                                            <MenuItem
+                                                key='tokenExchange'
+                                                value='tokenExchange'
+                                                id='Admin.KeyManager.form.type.menu'
+                                            >
+                                                {'Token Exchange' || 'tokenExchange'}
                                             </MenuItem>
                                         </Select>
                                         <FormHelperText>
@@ -927,6 +935,7 @@ function AddEditKeyManager(props) {
                                                                 name='enableDirectToken'
                                                                 color='primary'
                                                                 required={!isTokenTypeSelected}
+                                                                disabled={type === 'tokenExchange'}
                                                             />
                                                         )}
                                                         label={(
