@@ -722,10 +722,10 @@ class Utils {
         const splitRole = role.split('/', 2);
         let formattedRole = '';
         if (splitRole.length > 1) {
-            const domain = splitRole.length > 0 ? splitRole[0] : '';
+            const domain = splitRole[0];
             const domainUpper = domain.toUpperCase();
             if (domainUpper !== 'INTERNAL' && domainUpper !== 'APPLICATION') {
-                formattedRole = domain.toUpperCase().concat('/', splitRole[1]);
+                formattedRole = domainUpper.concat('/', splitRole[1]);
             } else {
                 formattedRole = role;
             }
