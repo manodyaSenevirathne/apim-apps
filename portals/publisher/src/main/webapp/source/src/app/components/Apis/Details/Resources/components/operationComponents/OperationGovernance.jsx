@@ -324,7 +324,7 @@ export default function OperationGovernance(props) {
                     <Grid item md={3} style={{ marginTop: '14px' }}>
                         { operation['x-auth-type'] && operation['x-auth-type'].toLowerCase() !== 'none' 
                             ? !disableUpdate && (
-                                <Link to={`/apis/${api.id}/scopes/create`} target='_blank' rel='noopener noreferrer' style={{ textDecoration: 'none' }}>
+                                <Link to={`/apis/${api.id}/scopes/create`} target='_blank' rel='noopener noreferrer'>
                                     <Typography style={{ marginLeft: '10px' }} color='primary' 
                                         display='inline' variant='caption'>
                                         <FormattedMessage
