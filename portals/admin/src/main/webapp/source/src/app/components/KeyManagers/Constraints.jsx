@@ -34,8 +34,8 @@ import Typography from '@mui/material/Typography';
  */
 export const CONSTRAINT_TYPES = {
     RANGE: 'RANGE',
-    RANGE_MIN: 'RANGE_MIN',
-    RANGE_MAX: 'RANGE_MAX',
+    MIN: 'MIN',
+    MAX: 'MAX',
     ENUM: 'ENUM',
     REGEX: 'REGEX',
 };
@@ -55,6 +55,9 @@ const CONSTRAINT_LABELS = {
     VALUE: 'Value',
 };
 
+// Float loose precision after 999999999999999
+const MAXIMUM_CHARACTOR_LENGTH = 15;
+
 /**
  * Parse constraint value from saved format to input format
  * @param {string} type - Constraint type
@@ -70,9 +73,9 @@ export const parseToInput = (type, val) => {
                 return { min, max };
             }
             return { min: '', max: '' };
-        case CONSTRAINT_TYPES.RANGE_MIN:
+        case CONSTRAINT_TYPES.MIN:
             return val && val.min !== undefined ? { min: String(val.min) } : { min: '' };
-        case CONSTRAINT_TYPES.RANGE_MAX:
+        case CONSTRAINT_TYPES.MAX:
             return val && val.max !== undefined ? { max: String(val.max) } : { max: '' };
         case CONSTRAINT_TYPES.REGEX:
             return val && val.pattern ? { pattern: val.pattern } : { pattern: '' };
@@ -111,14 +114,14 @@ export const parseToSave = (type, val) => {
             }
             return result;
         }
-        case CONSTRAINT_TYPES.RANGE_MIN: {
+        case CONSTRAINT_TYPES.MIN: {
             if (val === null) {
                 return {};
             }
             const n = parseFloat(val.min);
             return Number.isNaN(n) ? {} : { min: n };
         }
-        case CONSTRAINT_TYPES.RANGE_MAX: {
+        case CONSTRAINT_TYPES.MAX: {
             if (val === null) {
                 return {};
             }
@@ -158,8 +161,8 @@ const ConstraintInput = (props) => {
     // RANGE: multiple fields (min/max)
     if (constraintType === CONSTRAINT_TYPES.RANGE) {
         const rangeFields = [
-            { key: CONSTRAINT_KEYS.MIN, label: CONSTRAINT_LABELS.MIN, type: 'tel' },
-            { key: CONSTRAINT_KEYS.MAX, label: CONSTRAINT_LABELS.MAX, type: 'tel' }];
+            { key: CONSTRAINT_KEYS.MIN, label: CONSTRAINT_LABELS.MIN, type: 'text' },
+            { key: CONSTRAINT_KEYS.MAX, label: CONSTRAINT_LABELS.MAX, type: 'text' }];
         const objVal = value || { min: '', max: '' };
         return (
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -174,13 +177,15 @@ const ConstraintInput = (props) => {
                         margin='dense'
                         disabled={disabled}
                         value={objVal[f.key] ?? ''}
-                        onKeyDown={(e) => {
-                            if (['+', '*', '/'].includes(e.key)) {
-                                e.preventDefault();
-                            }
+                        onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, MAXIMUM_CHARACTOR_LENGTH);
+                            onChange(name, { [f.key]: val });
                         }}
-                        onChange={(e) => onChange(name, { ...objVal, [f.key]: e.target.value })}
-                        inputProps={{ onWheel: (e) => e.target.blur() }}
+                        inputProps={{
+                            onWheel: (e) => e.target.blur(),
+                            inputMode: 'numeric',
+                            pattern: '[0-9]*',
+                        }}
                         sx={{ flex: 1, minWidth: 100 }}
                     />
                 ))}
@@ -188,9 +193,9 @@ const ConstraintInput = (props) => {
         );
     }
 
-    // RANGE_MIN / RANGE_MAX
-    if (constraintType === CONSTRAINT_TYPES.RANGE_MIN || constraintType === CONSTRAINT_TYPES.RANGE_MAX) {
-        const isMin = constraintType === CONSTRAINT_TYPES.RANGE_MIN;
+    // MIN / MAX
+    if (constraintType === CONSTRAINT_TYPES.MIN || constraintType === CONSTRAINT_TYPES.MAX) {
+        const isMin = constraintType === CONSTRAINT_TYPES.MIN;
         const label = isMin ? CONSTRAINT_LABELS.MIN : CONSTRAINT_LABELS.MAX;
         const key = isMin ? CONSTRAINT_KEYS.MIN : CONSTRAINT_KEYS.MAX;
         const objVal = value || { [key]: '' };
@@ -198,15 +203,22 @@ const ConstraintInput = (props) => {
             <TextField
                 id={`${name}-${label.toLowerCase()}`}
                 label={label}
-                type='tel'
+                type='text'
                 variant='outlined'
                 size='small'
                 margin='dense'
                 fullWidth
                 disabled={disabled}
                 value={objVal[key] ?? ''}
-                onChange={(e) => onChange(name, { [key]: e.target.value })}
-                inputProps={{ onWheel: (e) => e.target.blur() }}
+                onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, MAXIMUM_CHARACTOR_LENGTH);
+                    onChange(name, { [key]: val });
+                }}
+                inputProps={{
+                    onWheel: (e) => e.target.blur(),
+                    inputMode: 'numeric',
+                    pattern: '[0-9]*',
+                }}
             />
         );
     }

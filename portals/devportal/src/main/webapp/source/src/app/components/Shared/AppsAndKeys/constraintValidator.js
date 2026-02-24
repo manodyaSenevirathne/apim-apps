@@ -22,8 +22,8 @@ import { isEmpty } from 'lodash';
  * Validates a value against a constraint object from the application configuration.
  *
  * Supported constraint types:
- *   RANGE_MIN  - value.min (minimum allowed value)
- *   RANGE_MAX  - value.max (maximum allowed value)
+ *   MIN  - value.min (minimum allowed value)
+ *   MAX  - value.max (maximum allowed value)
  *   RANGE      - value.min & value.max (both bounds)
  *   ENUM       - value.allowed (array of allowed values)
  *   REGEX      - value.pattern (regex pattern the value must match)
@@ -35,8 +35,8 @@ import { isEmpty } from 'lodash';
  * @returns {{ valid: boolean, message: string }} Validation result.
  */
 export const VALIDATOR_TYPES = {
-    RANGE_MIN: 'RANGE_MIN',
-    RANGE_MAX: 'RANGE_MAX',
+    MIN: 'MIN',
+    MAX: 'MAX',
     RANGE: 'RANGE',
     ENUM: 'ENUM',
     REGEX: 'REGEX',
@@ -56,10 +56,10 @@ export const getConstraintHint = (constraint, intl, messages) => {
 
     const { type, value } = constraint;
     switch (type) {
-        case VALIDATOR_TYPES.RANGE_MIN:
+        case VALIDATOR_TYPES.MIN:
             return intl.formatMessage(messages.rangeMin, { min: value.min });
 
-        case VALIDATOR_TYPES.RANGE_MAX:
+        case VALIDATOR_TYPES.MAX:
             return intl.formatMessage(messages.rangeMax, { max: value.max });
 
         case VALIDATOR_TYPES.RANGE: {
@@ -83,7 +83,7 @@ const validateConstraint = (inputValue, constraint, intl, messages) => {
     const { type, value } = constraint;
 
     switch (type) {
-        case VALIDATOR_TYPES.RANGE_MIN: {
+        case VALIDATOR_TYPES.MIN: {
             const { min } = value || {};
             const numericInput = Number(inputValue);
             if (inputValue.trim() === '' || Number.isNaN(numericInput) || numericInput < min) {
@@ -97,7 +97,7 @@ const validateConstraint = (inputValue, constraint, intl, messages) => {
             return { valid: true, message: '' };
         }
 
-        case VALIDATOR_TYPES.RANGE_MAX: {
+        case VALIDATOR_TYPES.MAX: {
             const { max } = value || {};
             const numericInput = Number(inputValue);
             if (inputValue.trim() === '' || Number.isNaN(numericInput) || numericInput > max) {
