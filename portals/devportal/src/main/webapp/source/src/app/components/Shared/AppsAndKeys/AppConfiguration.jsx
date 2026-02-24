@@ -190,10 +190,6 @@ const AppConfiguration = (props) => {
             id: 'Shared.AppsAndKeys.AppConfiguration.constraint.error.range.invalid',
             defaultMessage: 'Value must be a number between {min} and {max}',
         },
-        enumInvalid: {
-            id: 'Shared.AppsAndKeys.AppConfiguration.constraint.error.enumInvalid',
-            defaultMessage: 'Value(s) must be from: {allowed}',
-        },
         regexInvalid: {
             id: 'Shared.AppsAndKeys.AppConfiguration.constraint.error.regexInvalid',
             defaultMessage: 'Value must match the required pattern: {pattern}',
@@ -269,15 +265,20 @@ const AppConfiguration = (props) => {
                                 value={selectedValue}
                                 name={config.name}
                                 onChange={e => handleAppRequestChange(e)}
-                                error={!!constraintError}
-                                helperText={constraintError || getAppConfigToolTip()}
-                                FormHelperTextProps={constraintError ? { error: true } : {}}
+                                helperText={getAppConfigToolTip()}
                                 margin='dense'
                                 variant='outlined'
                                 size='small'
                                 disabled={!isOrgWideAppUpdateEnabled && !isUserOwner}
                             >
-                                {config.values.map(key => (
+                                {
+                                (config.constraint && config.constraint.value && config.constraint.value.allowed)
+                                ? config.constraint.value.allowed.map(key => (
+                                    <MenuItem key={key} value={key}>
+                                        {key}
+                                    </MenuItem>
+                                ))
+                                : config.values.map(key => (
                                     <MenuItem key={key} value={key}>
                                         {key}
                                     </MenuItem>
@@ -348,14 +349,21 @@ const AppConfiguration = (props) => {
                                         )}
                                         label={getAppConfigLabel()}
                                     >
-                                        {config.values.map(key => (
-                                            <MenuItem key={key} value={key}>
-                                                <Checkbox checked={selectedValue.indexOf(key) > -1}/>
-                                                <ListItemText primary={key}/>
-                                            </MenuItem>
-                                        ))}
+                                        {(config.constraint && config.constraint.value && config.constraint.value.allowed)
+                                            ? config.constraint.value.allowed.map(key => (
+                                                <MenuItem key={key} value={key}>
+                                                    <Checkbox checked={selectedValue.indexOf(key) > -1}/>
+                                                    <ListItemText primary={key}/>
+                                                </MenuItem>
+                                            ))
+                                            : config.values.map(key => (
+                                                <MenuItem key={key} value={key}>
+                                                    <Checkbox checked={selectedValue.indexOf(key) > -1}/>
+                                                    <ListItemText primary={key}/>
+                                                </MenuItem>
+                                            ))}
                                     </Select>
-                                    <FormHelperText>{constraintError || getAppConfigToolTip()}</FormHelperText>
+                                    <FormHelperText>{getAppConfigToolTip()}</FormHelperText>
                                 </FormControl>
                             </>
                         ) : (config.type === 'input' && config.multiple === true) ? (

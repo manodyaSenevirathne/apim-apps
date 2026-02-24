@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import { isEmpty } from "lodash";
+import { isEmpty } from 'lodash';
 
 /**
  * Validates a value against a constraint object from the application configuration.
@@ -66,15 +66,6 @@ export const getConstraintHint = (constraint, intl, messages) => {
             const { min, max } = value || {};
             return intl.formatMessage(messages.rangeInvalid, { min, max });
         }
-
-        case VALIDATOR_TYPES.ENUM: {
-            const { allowed } = value || {};
-            if (Array.isArray(allowed)) {
-                return intl.formatMessage(messages.enumInvalid, { allowed: allowed.join(', ') });
-            }
-            return '';
-        }
-
         case VALIDATOR_TYPES.REGEX:
             return intl.formatMessage(messages.regexInvalid, { pattern: value.pattern });
 
@@ -131,34 +122,6 @@ const validateConstraint = (inputValue, constraint, intl, messages) => {
                     message: intl && messages
                         ? intl.formatMessage(messages.rangeInvalid, { min, max })
                         : `Value must be a number between ${min} and ${max}`,
-                };
-            }
-            return { valid: true, message: '' };
-        }
-
-        case VALIDATOR_TYPES.ENUM: {
-            const { allowed } = value || {};
-            if (!Array.isArray(allowed)) {
-                return { valid: true, message: '' };
-            }
-            // Handle both single values and arrays (for multi-select)
-            if (Array.isArray(inputValue)) {
-                // For multi-select, check if all selected values are in the allowed list
-                const invalidValues = inputValue.filter((val) => !allowed.includes(val));
-                if (invalidValues.length > 0 || (inputValue.length === 0 && allowed.length > 0)) {
-                    return {
-                        valid: false,
-                        message: intl && messages
-                            ? intl.formatMessage(messages.enumInvalid, { allowed: allowed.join(', ') })
-                            : `Values must be from: ${allowed.join(', ')}. Invalid: ${invalidValues.join(', ')}`,
-                    };
-                }
-            } else if (!allowed.includes(inputValue)) {
-                return {
-                    valid: false,
-                    message: intl && messages
-                        ? intl.formatMessage(messages.enumInvalid, { allowed: allowed.join(', ') })
-                        : `Value must be one of: ${allowed.join(', ')}`,
                 };
             }
             return { valid: true, message: '' };
