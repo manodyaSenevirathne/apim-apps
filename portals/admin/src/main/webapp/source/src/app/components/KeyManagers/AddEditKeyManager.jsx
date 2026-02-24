@@ -634,7 +634,7 @@ function AddEditKeyManager(props) {
     const handleConstraintUpdate = (configName, value) => {
         setConstraints((prev) => {
             const newConstraints = { ...prev };
-            if (value === null || isEmpty(value)) {
+            if (value === undefined || value === null) {
                 delete newConstraints[configName];
             } else {
                 const config = constraintConfigurations.find((c) => c.name === configName);
@@ -2416,12 +2416,14 @@ function AddEditKeyManager(props) {
                                                 timeout='auto'
                                                 unmountOnExit
                                             >
-                                                <Constraints
-                                                    items={constraintConfigurations}
-                                                    constraintsData={constraints}
-                                                    onChange={handleConstraintUpdate}
-                                                    disabled={false}
-                                                />
+                                                <Box pl={2}>
+                                                    <Constraints
+                                                        items={constraintConfigurations}
+                                                        constraintsData={constraints}
+                                                        onChange={handleConstraintUpdate}
+                                                        disabled={false}
+                                                    />
+                                                </Box>
                                             </Collapse>
                                             {!constraintSectionExpaneded && (
                                                 <Typography

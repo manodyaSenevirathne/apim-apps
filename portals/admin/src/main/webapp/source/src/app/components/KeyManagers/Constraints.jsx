@@ -19,12 +19,15 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import Box from '@mui/material/Box';
+import Switch from '@mui/material/Switch';
 import Checkbox from '@mui/material/Checkbox';
+import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormControl from '@mui/material/FormControl';
 import FormHelperText from '@mui/material/FormHelperText';
 import FormGroup from '@mui/material/FormGroup';
 import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 
 /**
  * Supported constraint types
@@ -91,9 +94,12 @@ export const parseToInput = (type, val) => {
 export const parseToSave = (type, val) => {
     switch (type) {
         case CONSTRAINT_TYPES.RANGE: {
+            const result = {};
+            if (val === null) {
+                return result;
+            }
             const minStr = String(val.min || '').trim();
             const maxStr = String(val.max || '').trim();
-            const result = {};
 
             if (minStr !== '') {
                 const min = parseFloat(minStr);
@@ -106,14 +112,23 @@ export const parseToSave = (type, val) => {
             return result;
         }
         case CONSTRAINT_TYPES.RANGE_MIN: {
+            if (val === null) {
+                return {};
+            }
             const n = parseFloat(val.min);
             return Number.isNaN(n) ? {} : { min: n };
         }
         case CONSTRAINT_TYPES.RANGE_MAX: {
+            if (val === null) {
+                return {};
+            }
             const n = parseFloat(val.max);
             return Number.isNaN(n) ? {} : { max: n };
         }
         case CONSTRAINT_TYPES.REGEX: {
+            if (val === null) {
+                return {};
+            }
             const str = String(val.pattern || '').trim();
             if (str === '') return {};
             return { pattern: str };
@@ -143,8 +158,8 @@ const ConstraintInput = (props) => {
     // RANGE: multiple fields (min/max)
     if (constraintType === CONSTRAINT_TYPES.RANGE) {
         const rangeFields = [
-            { key: CONSTRAINT_KEYS.MIN, label: CONSTRAINT_LABELS.MIN, type: 'number' },
-            { key: CONSTRAINT_KEYS.MAX, label: CONSTRAINT_LABELS.MAX, type: 'number' }];
+            { key: CONSTRAINT_KEYS.MIN, label: CONSTRAINT_LABELS.MIN, type: 'tel' },
+            { key: CONSTRAINT_KEYS.MAX, label: CONSTRAINT_LABELS.MAX, type: 'tel' }];
         const objVal = value || { min: '', max: '' };
         return (
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -159,6 +174,11 @@ const ConstraintInput = (props) => {
                         margin='dense'
                         disabled={disabled}
                         value={objVal[f.key] ?? ''}
+                        onKeyDown={(e) => {
+                            if (['+', '*', '/'].includes(e.key)) {
+                                e.preventDefault();
+                            }
+                        }}
                         onChange={(e) => onChange(name, { ...objVal, [f.key]: e.target.value })}
                         inputProps={{ onWheel: (e) => e.target.blur() }}
                         sx={{ flex: 1, minWidth: 100 }}
@@ -178,7 +198,7 @@ const ConstraintInput = (props) => {
             <TextField
                 id={`${name}-${label.toLowerCase()}`}
                 label={label}
-                type='number'
+                type='tel'
                 variant='outlined'
                 size='small'
                 margin='dense'
@@ -311,8 +331,8 @@ function Constraints(props) {
     }, [constraintsData]);
 
     return (
-        <Box>
-            {items.map((c) => {
+        <Box sx={{ mt: 2 }}>
+            {items.map((c, index) => {
                 const data = constraintsData[c.name] || {};
                 const local = elementState[c.name] || {};
                 // Active if locally active OR externally present
@@ -325,15 +345,37 @@ function Constraints(props) {
                 const displayValue = parseToInput(c.constraintType, valueToParse);
 
                 return (
-                    <Box
-                        key={c.name}
-                        sx={{
-                            mb: 2,
-                        }}
-                    >
-                        <FormControlLabel
-                            control={(
-                                <Checkbox
+                    <React.Fragment key={c.name}>
+                        {index > 0 && (
+                            <Divider
+                                sx={{
+                                    my: 1.5,
+                                    opacity: 0.2,
+                                    ml: 0,
+                                    width: 'calc(100%)',
+                                }}
+                            />
+                        )}
+                        <Box sx={{ py: 0.5, px: 0.5 }}>
+                            {/* Label row: name on the left, toggle switch on the right */}
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                }}
+                            >
+                                <Typography
+                                    variant='body1'
+                                    sx={{
+                                        flex: 1,
+                                        minWidth: 0,
+                                        wordBreak: 'break-word',
+                                    }}
+                                >
+                                    {c.label || c.name}
+                                </Typography>
+                                <Switch
                                     checked={isOn}
                                     onChange={() => {
                                         if (isOn) {
@@ -345,7 +387,7 @@ function Constraints(props) {
                                             onChange(c.name, null);
                                         } else {
                                             // Enable: Set active=true, restore value
-                                            const valToRestore = local.value || null;
+                                            const valToRestore = local.value || displayValue;
                                             setElementState((prev) => ({
                                                 ...prev,
                                                 [c.name]: { ...prev[c.name], active: true },
@@ -356,27 +398,34 @@ function Constraints(props) {
                                     color='primary'
                                     size='small'
                                     disabled={disabled}
+                                    sx={{ flexShrink: 0 }}
                                 />
-                            )}
-                            label={c.label || c.name}
-                            sx={{ ml: -1 }}
-                        />
-                        <Box sx={{ opacity: isOn ? 1 : 0.5, pl: 3 }}>
-                            <ConstraintInput
-                                config={c}
-                                value={displayValue}
-                                onChange={(name, inputValue) => {
-                                    onChange(name, parseToSave(c.constraintType, inputValue));
-                                }}
-                                disabled={disabled || !isOn}
-                            />
-                            {(c.tooltip || c.toolTip) && (
-                                <FormHelperText>
-                                    {c.tooltip || c.toolTip}
-                                </FormHelperText>
+                            </Box>
+                            {/* Input fields — only rendered when toggle is on */}
+                            {isOn && (
+                                <Box sx={{ mt: 1 }}>
+                                    <ConstraintInput
+                                        config={c}
+                                        value={displayValue}
+                                        onChange={(name, inputValue) => {
+                                            onChange(name, parseToSave(c.constraintType, inputValue));
+                                        }}
+                                        disabled={disabled}
+                                        inputProps={{
+                                            variant: 'outlined',
+                                            margin: 'dense',
+                                            fullWidth: true,
+                                        }}
+                                    />
+                                    {(c.tooltip || c.toolTip) && (
+                                        <FormHelperText>
+                                            {c.tooltip || c.toolTip}
+                                        </FormHelperText>
+                                    )}
+                                </Box>
                             )}
                         </Box>
-                    </Box>
+                    </React.Fragment>
                 );
             })}
         </Box>
