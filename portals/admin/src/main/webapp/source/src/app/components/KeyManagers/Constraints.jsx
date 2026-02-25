@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import Box from '@mui/material/Box';
 import Switch from '@mui/material/Switch';
@@ -183,8 +183,6 @@ const ConstraintInput = (props) => {
                         }}
                         inputProps={{
                             onWheel: (e) => e.target.blur(),
-                            inputMode: 'numeric',
-                            pattern: '[0-9]*',
                         }}
                         sx={{ flex: 1, minWidth: 100 }}
                     />
@@ -216,8 +214,6 @@ const ConstraintInput = (props) => {
                 }}
                 inputProps={{
                     onWheel: (e) => e.target.blur(),
-                    inputMode: 'numeric',
-                    pattern: '[0-9]*',
                 }}
             />
         );
@@ -322,7 +318,7 @@ function Constraints(props) {
 
     // State to track local activation and cached values
     // { [name]: { active: boolean, value: any } }
-    const [elementState, setElementState] = React.useState({});
+    const [elementState, setElementState] = useState({});
 
     // Sync state from external data
     React.useEffect(() => {
