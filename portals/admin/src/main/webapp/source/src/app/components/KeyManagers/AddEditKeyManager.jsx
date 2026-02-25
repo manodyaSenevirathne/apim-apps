@@ -622,6 +622,9 @@ function AddEditKeyManager(props) {
             if (savedConstraint?.type && savedConstraint?.value) {
                 constraintsData[key] = savedConstraint;
             } else if (!id && constraintConfig.default) {
+                if (isEmpty(constraintConfig.default)) {
+                    return;
+                }
                 constraintsData[key] = {
                     type: constraintConfig.constraintType,
                     value: constraintConfig.default,
