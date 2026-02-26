@@ -56,7 +56,7 @@ const CONSTRAINT_LABELS = {
 };
 
 // Float loose precision after 999999999999999
-const MAXIMUM_CHARACTOR_LENGTH = 15;
+const MAXIMUM_CHARACTER_LENGTH = 15;
 
 /**
  * Parse constraint value from saved format to input format
@@ -178,7 +178,7 @@ const ConstraintInput = (props) => {
                         disabled={disabled}
                         value={objVal[f.key] ?? ''}
                         onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '').slice(0, MAXIMUM_CHARACTOR_LENGTH);
+                            const val = e.target.value.replace(/\D/g, '').slice(0, MAXIMUM_CHARACTER_LENGTH);
                             onChange(name, { [f.key]: val });
                         }}
                         inputProps={{
@@ -209,7 +209,7 @@ const ConstraintInput = (props) => {
                 disabled={disabled}
                 value={objVal[key] ?? ''}
                 onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '').slice(0, MAXIMUM_CHARACTOR_LENGTH);
+                    const val = e.target.value.replace(/\D/g, '').slice(0, MAXIMUM_CHARACTER_LENGTH);
                     onChange(name, { [key]: val });
                 }}
                 inputProps={{
