@@ -249,7 +249,7 @@ function AddEditKeyManager(props) {
     const [organizations, setOrganizations] = useState([]);
     const [constraintConfigurations, setConstraintConfigurations] = useState([]);
     const [constraints, setConstraints] = useState({});
-    const [constraintSectionExpaneded, setConstraintSectionExpaneded] = useState(false);
+    const [constraintSectionExpanded, setConstraintSectionExpanded] = useState(false);
 
     const restApi = new API();
     const handleRoleAddition = (role) => {
@@ -650,7 +650,7 @@ function AddEditKeyManager(props) {
     };
 
     const handleConstraintsExpandClick = () => {
-        setConstraintSectionExpaneded(!constraintSectionExpaneded);
+        setConstraintSectionExpanded(!constraintSectionExpanded);
     };
 
     useEffect(() => {
@@ -661,7 +661,7 @@ function AddEditKeyManager(props) {
             }
             // Auto-expand if any field is already constrained (value is not null)
             if (Object.values(constraintsData).some((c) => c.value !== null)) {
-                setConstraintSectionExpaneded(true);
+                setConstraintSectionExpanded(true);
             }
         }
     }, [constraintConfigurations, id]);
@@ -2401,13 +2401,13 @@ function AddEditKeyManager(props) {
                                             <IconButton
                                                 sx={{ marginLeft: 'auto' }}
                                                 onClick={handleConstraintsExpandClick}
-                                                aria-expanded={constraintSectionExpaneded}
+                                                aria-expanded={constraintSectionExpanded}
                                                 aria-label='show more'
                                                 size='large'
                                             >
                                                 <StyledExpandMoreIcon
                                                     className={
-                                                        constraintSectionExpaneded
+                                                        constraintSectionExpanded
                                                             ? 'expandOpen' : 'expand'
                                                     }
                                                 />
@@ -2415,7 +2415,7 @@ function AddEditKeyManager(props) {
                                         </Box>
                                         <Box>
                                             <Collapse
-                                                in={constraintSectionExpaneded}
+                                                in={constraintSectionExpanded}
                                                 timeout='auto'
                                                 unmountOnExit
                                             >
@@ -2428,7 +2428,7 @@ function AddEditKeyManager(props) {
                                                     />
                                                 </Box>
                                             </Collapse>
-                                            {!constraintSectionExpaneded && (
+                                            {!constraintSectionExpanded && (
                                                 <Typography
                                                     color='inherit'
                                                     variant='caption'
