@@ -195,8 +195,13 @@ const AppConfiguration = (props) => {
             defaultMessage: 'Value must match the required pattern: {pattern}',
         },
     });
-
-        const handleAppRequestChange = (event) => {
+    
+    /**
+     * This method is used to handle the updating of key generation
+     * request object.
+     * @param {*} event event fired
+     */
+    const handleAppRequestChange = (event) => {
         const { target: currentTarget } = event;
         const newValue = currentTarget.type === 'checkbox' ? currentTarget.checked : currentTarget.value;
         setSelectedValue(newValue);
