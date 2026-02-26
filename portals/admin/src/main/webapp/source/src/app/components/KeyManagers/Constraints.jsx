@@ -105,11 +105,11 @@ export const parseToSave = (type, val) => {
             const maxStr = String(val.max || '').trim();
 
             if (minStr !== '') {
-                const min = parseFloat(minStr);
+                const min = parseInt(minStr, 10);
                 if (!Number.isNaN(min)) result.min = min;
             }
             if (maxStr !== '') {
-                const max = parseFloat(maxStr);
+                const max = parseInt(maxStr, 10);
                 if (!Number.isNaN(max)) result.max = max;
             }
             return result;
@@ -118,14 +118,14 @@ export const parseToSave = (type, val) => {
             if (val === null) {
                 return {};
             }
-            const n = parseFloat(val.min);
+            const n = parseInt(val.min, 10);
             return Number.isNaN(n) ? {} : { min: n };
         }
         case CONSTRAINT_TYPES.MAX: {
             if (val === null) {
                 return {};
             }
-            const n = parseFloat(val.max);
+            const n = parseInt(val.max, 10);
             return Number.isNaN(n) ? {} : { max: n };
         }
         case CONSTRAINT_TYPES.REGEX: {
