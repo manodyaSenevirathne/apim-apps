@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -29,7 +29,6 @@ const mockIntl = {
         return defaultMessage;
     },
 };
-
 const mockMessages = {
     rangeMin: { defaultMessage: 'Value must be at least {min}' },
     rangeMax: { defaultMessage: 'Value must be at most {max}' },
