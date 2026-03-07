@@ -92,11 +92,11 @@ function ParallaxScroll(props) {
             >
                 <div className={classNames(classes.slideContentWrapper, 'slideContentWrapper')}>
                     <div className={classNames(classes.slideContentTitle, 'slideContentTitle')}>
-                        <HTMLRender html={slide.title} />
+                        <HTMLRender html={slide.title} sanitize={false} />
                     </div>
 
                     <div className={classes.slideContentContent}>
-                        <HTMLRender html={slide.content} />
+                        <HTMLRender html={slide.content} sanitize={false} />
                     </div>
                 </div>
             </div>
