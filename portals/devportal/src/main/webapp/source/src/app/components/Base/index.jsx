@@ -751,7 +751,7 @@ class LayoutLegacy extends React.Component {
                         <footer className={classes.footer} id='footer'>
                             {footerHTML && footerHTML !== '' ? (
                                 <>
-                                    {!dangerMode && (<HTMLRender html={footerHTML} />)}
+                                    {!dangerMode && (<HTMLRender html={footerHTML} sanitize={false} />)}
                                     {dangerMode && (<div contentEditable='true' dangerouslySetInnerHTML={{ __html: footerHTML }} />)}
                                 </>
                             ) : (

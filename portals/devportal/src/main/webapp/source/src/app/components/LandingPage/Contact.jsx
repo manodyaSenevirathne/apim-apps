@@ -25,7 +25,7 @@ function Contact() {
     const { custom: { landingPage: { contact: { contactHTML } } } } = theme;
     return (
         <Root className={classes.root}>
-            <HTMLRender html={contactHTML} />
+            <HTMLRender html={contactHTML} sanitize={false} />
         </Root>
     );
 }
