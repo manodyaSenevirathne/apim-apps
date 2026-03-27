@@ -733,7 +733,6 @@
   "Apis.Details.Documents.MarkdownEditor.update.success.message": "updated successfully.",
   "Apis.Details.Documents.TextEditor.cancel.button": "Cancel",
   "Apis.Details.Documents.TextEditor.edit.content": "Edit Content",
-  "Apis.Details.Documents.TextEditor.edit.content.invalid.url": "Invalid URL. The URL must start with http:// or https://",
   "Apis.Details.Documents.TextEditor.edit.content.of": "Edit Content of",
   "Apis.Details.Documents.TextEditor.update.content.button": "Update Content",
   "Apis.Details.Documents.TextEditor.update.error.message": "update failed.",
