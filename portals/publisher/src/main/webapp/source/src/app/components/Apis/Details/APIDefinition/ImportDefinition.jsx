@@ -169,8 +169,8 @@ export default function ImportDefinition(props) {
             })
             .catch((error) => {
                 console.error(error);
-                if (err.response && err.response.body) {
-                    Alert.error(err.response.body.description);
+                if (error.response && error.response.body) {
+                    Alert.error(error.response.body.description);
                 } else {
                     Alert.error(intl.formatMessage({
                         id: 'Apis.Details.APIDefinition.APIDefinition.error.while.updating.import.api.definition',
