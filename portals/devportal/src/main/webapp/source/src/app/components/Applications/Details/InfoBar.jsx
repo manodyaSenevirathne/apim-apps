@@ -180,7 +180,7 @@ class InfoBar extends React.Component {
                                     color: theme.palette.getContrastText(theme.custom.infoBar.background),
                                 })}
                             >
-                                <Typography id='itest-info-bar-application-name' variant='h4'>{application.name}</Typography>
+                                <Typography id='itest-info-bar-application-name' variant='h4' noWrap>{application.name}</Typography>
                             </Link>
                         </Box>
                         <Box sx={(theme) => ({ marginLeft: theme.spacing(1) })}>
