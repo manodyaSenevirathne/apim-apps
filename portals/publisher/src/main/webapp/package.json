@@ -206,6 +206,7 @@
         "@stoplight/spectral-rulesets": {
             ".": "1.22.0",
             "@asyncapi/specs": "6.8.1"
-        }
+        },
+        "lodash": "4.18.1"
     }
 }

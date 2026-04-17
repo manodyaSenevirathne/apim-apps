@@ -45,7 +45,7 @@
         "ajv": "^8.12.0",
         "async-mutex": "^0.5.0",
         "autosuggest-highlight": "^3.3.4",
-        "axios": "1.13.2",
+        "axios": "1.15.0",
         "base64url": "3.0.1",
         "btoa": "^1.2.1",
         "caniuse-api": "^3.0.0",
@@ -64,7 +64,7 @@
         "js-file-download": "^0.4.12",
         "js-yaml": "4.1.1",
         "jss-rtl": "^0.3.0",
-        "lodash": "^4.17.21",
+        "lodash": "4.18.1",
         "lodash.clonedeep": "^4.5.0",
         "lodash.isplainobject": "^4.0.6",
         "lodash.merge": "^4.6.2",
@@ -194,6 +194,7 @@
         },
         "openapi-to-postmanv2": {
             "js-yaml": "4.1.1"
-        }
+        },
+        "lodash": "4.18.1"
     }
 }
