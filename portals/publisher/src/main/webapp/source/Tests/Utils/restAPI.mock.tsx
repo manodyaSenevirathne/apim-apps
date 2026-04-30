@@ -10,7 +10,7 @@
  * entered into with WSO2 governing the purchase of this software and any
  * associated services.
  */
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { Context, OpenAPIBackend, Request } from "openapi-backend";
 import { setupServer } from "msw/node";
 import { searchParamsToRequestQuery } from "./TestingLibrary";
@@ -28,8 +28,6 @@ type APIResponseOverride = (
   requestContext: Context,
   currentMock: any,
   currentStatusCode: number,
-  response: (status: any, mock: any) => void,
-  context: { status: (s: number) => void; json: (s: string) => void }
 ) => [mock: any, status: number ] | {} | void;
 export const { onResponse, getOverride, resetMockHandler } = (() => {
   const defaultHandler: APIResponseOverride = (c, mock, status) => {};
@@ -48,59 +46,56 @@ export const { onResponse, getOverride, resetMockHandler } = (() => {
 
 // An Async function which will be passed to the `msw` library for handling intercepted incoming requests
 const createMockHandler = (apiMapping: OASBackendMapping) => async (
-  req: { url?: any; method?: any; headers?: any },
-  res: any,
-  ctx: any
+  { request }: { request: globalThis.Request }
 ) => {
   const thisAPIBackend = apiMapping.oasBackend;
+  const url = new URL(request.url);
 
-  let mockedResponse = ctx.json({
-    error: "something went wrong",
-  });
   try {
-    const path = req.url.pathname.replace(apiMapping.context, "");
-    const query = req.url.searchParams.toString()
-      ? searchParamsToRequestQuery(req.url.searchParams)
+    const path = url.pathname.replace(apiMapping.context, "");
+    const query = url.searchParams.toString()
+      ? searchParamsToRequestQuery(url.searchParams)
       : "";
-    const { method, headers } = req;
+    const { method } = request;
+    const headers = Object.fromEntries(request.headers.entries());
     const oasRequest: Request = {
       path,
       method,
-      headers: headers.all(),
+      headers,
       query,
     };
-    if (req.url.pathname === "/api/am/publisher/v4/swagger.yaml") {
+    if (url.pathname === "/api/am/publisher/v4/swagger.yaml") {
       // Temporary fix for removing x-example $refs
       await apiMapping.oasBackend.init();
       const oasDef = thisAPIBackend.document;
-      Object.keys(oasDef.paths).forEach((path) =>
-        Object.keys(oasDef.paths[path]).forEach((verb) => {
-          delete oasDef.paths[path][verb]["x-examples"];
+      Object.keys(oasDef.paths ?? {}).forEach((pathKey) =>
+        Object.keys(oasDef.paths[pathKey]).forEach((verb) => {
+          delete oasDef.paths[pathKey][verb]["x-examples"];
         })
       );
       // End of temporary fix for removing x-example $refs
-      mockedResponse = res(ctx.json(oasDef));
+      return HttpResponse.json(oasDef);
     } else {
-      mockedResponse = await thisAPIBackend.handleRequest(oasRequest, res, ctx);
+      return await thisAPIBackend.handleRequest(oasRequest);
     }
     // Debug at below point to see the mocked response
   } catch (error) {
     console.error(error);
+    return HttpResponse.json({ error: "something went wrong" }, { status: 500 });
   }
-  return mockedResponse;
 };
 
 export const getMockServer = (_apiList: APIName | APIName[]) => {
   // *IMPORTANT* Should provide a unique segment in the request (ideally API context)
   // which could differentiate current API requests from others
-  const mockingVerbs = [rest.get, rest.post, rest.put, rest.patch, rest.delete];
+  const mockingVerbs = [http.get, http.post, http.put, http.patch, http.delete];
   const mockingVerbsList: any[] = [];
   let apiList: any = Array.isArray(_apiList) ? _apiList : [_apiList];
 
   apiList.forEach((APIName: string) => {
     const apiMapping = openApiBackends[APIName];
     apiMapping.oasBackend.register({
-      notImplemented: async (notImplC, notImplRes, notImplContext) => {
+      notImplemented: async (notImplC) => {
         const {
           status: initialStatus,
           mock: initialMock,
@@ -111,8 +106,6 @@ export const getMockServer = (_apiList: APIName | APIName[]) => {
           notImplC,
           initialMock,
           initialStatus,
-          notImplRes,
-          notImplContext
         );
         let status = initialStatus, mock = initialMock;
         if(Array.isArray(overriddenResponse)) {
@@ -121,10 +114,7 @@ export const getMockServer = (_apiList: APIName | APIName[]) => {
           mock = overriddenResponse;
         }
         // Every valid operation (path + verb) request will go through this handler
-        return notImplRes(
-          notImplContext.status(status),
-          notImplContext.json(mock)
-        );
+        return HttpResponse.json(mock, { status });
       },
     });
     const mockHandler = createMockHandler(apiMapping);
