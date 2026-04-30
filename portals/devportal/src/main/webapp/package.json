@@ -52,7 +52,7 @@
         "cleanup-dependencies": "0.0.6",
         "dataloader": "^2.1.0",
         "dayjs": "^1.11.7",
-        "dompurify": "3.3.2",
+        "dompurify": "3.4.0",
         "downshift": "^6.1.12",
         "fetch-to-curl": "^0.6.0",
         "fs-react": "0.0.4",
@@ -97,7 +97,7 @@
         "remark-gfm": "^3.0.1",
         "stream-browserify": "^3.0.0",
         "swagger-client": "3.36.2",
-        "swagger-ui-react": "5.32.0",
+        "swagger-ui-react": "5.32.1",
         "url": "^0.11.3",
         "xml-formatter": "^3.6.2"
     },
