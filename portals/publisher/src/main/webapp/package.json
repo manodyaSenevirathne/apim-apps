@@ -132,7 +132,6 @@
         "@types/react-router-dom": "^5.3.2",
         "ajv-formats": "^2.1.1",
         "babel-core": "^7.0.0-bridge.0",
-        "babel-jest": "^29.7.0",
         "babel-loader": "^9.1.0",
         "babel-plugin-dynamic-import-node": "^2.3.3",
         "babel-plugin-formatjs": "^10.5.16",
@@ -155,7 +154,7 @@
         "eslint-plugin-testing-library": "^5.0.0",
         "eslint-webpack-plugin": "^2.5.1",
         "html-webpack-plugin": "^5.6.0",
-        "jest": "^29.7.0",
+        "jest": "30.3.0",
         "jest-environment-jsdom": "^29.7.0",
         "json-loader": "^0.5.7",
         "less": "^4.2.0",
@@ -208,6 +207,13 @@
             ".": "1.22.0",
             "@asyncapi/specs": "6.8.1"
         },
-        "lodash": "4.18.1"
+        "lodash": "4.18.1",
+        "babel-jest": {
+            "glob": "10.4.5"
+        },
+        "clean-webpack-plugin": {
+            "del": "6.1.1"
+        },
+        "rimraf@3": "4.4.1"
     }
 }
