@@ -215,6 +215,7 @@
         "clean-webpack-plugin": {
             "del": "6.1.1"
         },
-        "rimraf@3": "4.4.1"
+        "rimraf@3": "4.4.1",
+        "@babel/runtime-corejs3" : "7.27.6"
     }
 }
