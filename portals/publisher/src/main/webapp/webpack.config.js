@@ -151,6 +151,7 @@ module.exports = (env, argv) => {
                 "crypto": false,
                 "crypto-browserify": require.resolve('crypto-browserify'),
                 "url": require.resolve("url/"),
+                "buffer": require.resolve("buffer/"),
             },
         },
         module: {
