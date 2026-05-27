@@ -127,16 +127,16 @@ const StyledCard = styled(Card)((
         alignSelf: 'flex-start',
         flex: 1,
         width: '25%',
-        'padding-left': '5px',
-        'padding-right': '65px',
+        paddingInlineStart: '5px',
+        paddingInlineEnd: '65px',
     },
 
     [`& .${classes.thumbLeftAction}`]: {
         alignSelf: 'flex-start',
         flex: 1,
         width: '25%',
-        'padding-left': '5px',
-        'padding-right': '10px',
+        paddingInlineStart: '5px',
+        paddingInlineEnd: '10px',
     },
 
     [`& .${classes.thumbRight}`]: {
@@ -181,7 +181,7 @@ const StyledCard = styled(Card)((
     [`& .${classes.thumbWrapper}`]: {
         position: 'relative',
         paddingTop: 20,
-        marginRight: theme.spacing(2),
+        marginInlineEnd: theme.spacing(2),
     },
 
     [`& .${classes.deleteIcon}`]: {
@@ -226,10 +226,10 @@ const StyledCard = styled(Card)((
         color: theme.palette.text.secondary,
         position: 'absolute',
         bottom: '35px',
-        right: '10px',
+        insetInlineEnd: '10px',
         background: theme.custom.thumbnail.contentBackgroundColor,
-        'padding-left': '10px',
-        'padding-right': '10px',
+        paddingInlineStart: '10px',
+        paddingInlineEnd: '10px',
     },
 
     [`& .${classes.actionArea}`]: {
@@ -377,6 +377,15 @@ class ApiThumbClassicLegacy extends React.Component {
         this.setState({ technicalAnchorEl: null, technicalOpenPopover: false });
     };
 
+    getPopoverOrigins() {
+        const { theme } = this.props;
+        const isRtl = theme.direction === 'rtl';
+        return {
+            anchorOrigin: { vertical: 'top', horizontal: isRtl ? 'left' : 'right' },
+            transformOrigin: { vertical: 'bottom', horizontal: isRtl ? 'right' : 'left' },
+        };
+    }
+
     /**
      * @inheritdoc
      * @returns {React.Component} @inheritdoc
@@ -395,6 +404,7 @@ class ApiThumbClassicLegacy extends React.Component {
         } = this.props;
         const { custom: { thumbnail, social: { showRating }, thumbnailTemplates: { variant, active } } } = theme;
         const { name, version, context } = api;
+        const popoverOrigins = this.getPopoverOrigins();
 
         let { provider } = api;
         if (
@@ -622,6 +632,7 @@ class ApiThumbClassicLegacy extends React.Component {
                                             component='div'
                                             align='right'
                                             className={classes.contextBox}
+                                            dir='ltr'
                                         >
                                             {context}
                                         </Typography>
@@ -686,14 +697,8 @@ class ApiThumbClassicLegacy extends React.Component {
                                                                 }}
                                                                 open={this.state.buniessOpenPopover}
                                                                 anchorEl={this.state.businessAnchorEl}
-                                                                anchorOrigin={{
-                                                                    vertical: 'top',
-                                                                    horizontal: 'right',
-                                                                }}
-                                                                transformOrigin={{
-                                                                    vertical: 'bottom',
-                                                                    horizontal: 'left',
-                                                                }}
+                                                                anchorOrigin={popoverOrigins.anchorOrigin}
+                                                                transformOrigin={popoverOrigins.transformOrigin}
                                                                 onClose={this.handleBusinessPopoverClose}
                                                                 disableRestoreFocus
                                                             >
@@ -706,7 +711,7 @@ class ApiThumbClassicLegacy extends React.Component {
                                                                     <EmailIcon fontSize='small' />
                                                                     <Typography
                                                                         variant='body2'
-                                                                        style={{ marginLeft: '8px' }}
+                                                                        style={{ marginInlineStart: '8px' }}
                                                                     >
                                                                         {api.businessInformation.businessOwnerEmail}
                                                                     </Typography>
@@ -762,14 +767,8 @@ class ApiThumbClassicLegacy extends React.Component {
                                                                 }}
                                                                 open={this.state.technicalOpenPopover}
                                                                 anchorEl={this.state.technicalAnchorEl}
-                                                                anchorOrigin={{
-                                                                    vertical: 'top',
-                                                                    horizontal: 'right',
-                                                                }}
-                                                                transformOrigin={{
-                                                                    vertical: 'bottom',
-                                                                    horizontal: 'left',
-                                                                }}
+                                                                anchorOrigin={popoverOrigins.anchorOrigin}
+                                                                transformOrigin={popoverOrigins.transformOrigin}
                                                                 onClose={this.handleTechnicalPopoverClose}
                                                                 disableRestoreFocus
                                                             >
@@ -782,7 +781,7 @@ class ApiThumbClassicLegacy extends React.Component {
                                                                     <EmailIcon fontSize='small' />
                                                                     <Typography
                                                                         variant='body2'
-                                                                        style={{ marginLeft: '8px' }}
+                                                                        style={{ marginInlineStart: '8px' }}
                                                                     >
                                                                         {api.businessInformation.technicalOwnerEmail}
                                                                     </Typography>
@@ -843,7 +842,7 @@ ApiThumbClassicLegacy.defaultProps = {
 };
 ApiThumbClassicLegacy.propTypes = {
     classes: PropTypes.shape({}).isRequired,
-    theme: PropTypes.shape({}).isRequired,
+    theme: PropTypes.shape({ direction: PropTypes.string }).isRequired,
     customWidth: PropTypes.number,
     customHeight: PropTypes.number,
     showInfo: PropTypes.bool,
