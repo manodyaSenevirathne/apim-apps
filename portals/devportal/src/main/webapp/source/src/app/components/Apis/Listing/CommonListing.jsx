@@ -69,7 +69,7 @@ const Root = styled('div')((
     },
 ) => ({
     [`& .${classes.rightIcon}`]: {
-        marginLeft: theme.spacing(1),
+        marginInlineStart: theme.spacing(1),
     },
 
     [`& .${classes.button}`]: {
@@ -84,7 +84,7 @@ const Root = styled('div')((
 
     [`& .${classes.ListingWrapper}`]: {
         paddingTop: 10,
-        paddingLeft: 35,
+        paddingInlineStart: 35,
         maxWidth: theme.custom.contentAreaWidth,
     },
 
@@ -100,8 +100,8 @@ const Root = styled('div')((
 
     [`& .${classes.mainIconWrapper}`]: {
         paddingTop: 13,
-        paddingLeft: 20,
-        paddingRight: 20,
+        paddingInlineStart: 20,
+        paddingInlineEnd: 20,
     },
 
     [`& .${classes.mainTitle}`]: {
@@ -115,7 +115,7 @@ const Root = styled('div')((
     [`& .${classes.listContentWrapper}`]: {
         padding: `0 ${theme.spacing(3)}`,
         display: 'flex',
-        marginLeft: -40,
+        marginInlineStart: -40,
     },
 
     [`& .${classes.iconDefault}`]: {
@@ -135,43 +135,43 @@ const Root = styled('div')((
     },
 
     [`& .${classes.contentWithTags}`]: {
-        marginLeft: theme.custom.tagCloud.leftMenu.width,
+        marginInlineStart: theme.custom.tagCloud.leftMenu.width,
     },
 
     [`& .${classes.contentWithoutTags}`]: {
-        marginLeft: -4,
+        marginInlineStart: -4,
     },
 
     [`& .${classes.contentWithTagsHidden}`]: {
-        marginLeft: theme.custom.tagCloud.leftMenu.sliderWidth,
+        marginInlineStart: theme.custom.tagCloud.leftMenu.sliderWidth,
     },
 
     [`& .${classes.LeftMenu}`]: {
         backgroundColor: theme.custom.tagCloud.leftMenu.background,
         color: theme.custom.tagCloud.leftMenu.color,
-        textAlign: 'left',
+        textAlign: 'start',
         fontFamily: theme.typography.fontFamily,
         position: 'absolute',
         bottom: 0,
-        paddingLeft: 0,
+        paddingInlineStart: 0,
         width: theme.custom.tagCloud.leftMenu.width,
         top: 0,
-        left: 0,
+        insetInlineStart: 0,
         overflowY: 'auto',
     },
 
     [`& .${classes.LeftMenuForSlider}`]: {
         backgroundColor: theme.custom.tagCloud.leftMenu.background,
         color: theme.custom.tagCloud.leftMenu.color,
-        textAlign: 'left',
+        textAlign: 'start',
         fontFamily: theme.typography.fontFamily,
         position: 'absolute',
         bottom: 0,
-        paddingLeft: 0,
+        paddingInlineStart: 0,
         width: theme.custom.tagCloud.leftMenu.sliderWidth,
         top: 0,
-        left: 0,
-        overflowY: 'auto',
+        insetInlineStart: 0,
+        overflowY: 'visible',
         display: 'flex',
     },
 
@@ -183,17 +183,19 @@ const Root = styled('div')((
         alignItems: 'center',
         display: 'flex',
         position: 'absolute',
-        right: 0,
+        insetInlineEnd: 0,
         cursor: 'pointer',
     },
 
     [`& .${classes.rotatedText}`]: {
-        transform: 'rotate(270deg)',
-        transformOrigin: 'left bottom 0',
+        transform: theme.direction === 'rtl' ? 'rotate(90deg)' : 'rotate(270deg)',
+        transformOrigin: 'center',
         position: 'absolute',
         whiteSpace: 'nowrap',
         top: theme.custom.infoBar.height * 4,
-        marginLeft: 23,
+        width: 25,
+        insetInlineStart: 0,
+        textAlign: 'center',
         cursor: 'pointer',
     },
 
@@ -356,7 +358,7 @@ class CommonListingLegacy extends React.Component {
                             onClick={this.toggleLeftMenu}
                             onKeyDown={this.toggleLeftMenu}
                         >
-                            <Icon>keyboard_arrow_left</Icon>
+                            <Icon>{theme.direction === 'rtl' ? 'keyboard_arrow_right' : 'keyboard_arrow_left'}</Icon>
                         </div>
                         {categoryPaneVisible && <CategoryListingCategories allCategories={allCategories} />}
                         {tagPaneVisible && active && <TagCloudListingTags allTags={allTags} />}
@@ -370,7 +372,7 @@ class CommonListingLegacy extends React.Component {
                             onClick={this.toggleLeftMenu}
                             onKeyDown={this.toggleLeftMenu}
                         >
-                            <Icon>keyboard_arrow_right</Icon>
+                            <Icon>{theme.direction === 'rtl' ? 'keyboard_arrow_left' : 'keyboard_arrow_right'}</Icon>
                         </div>
                         <div
                             className={classNames(classes.rotatedText, 'api-listing-title-section-hidden')}
@@ -481,7 +483,7 @@ CommonListingLegacy.contextType = Settings;
 
 CommonListingLegacy.propTypes = {
     classes: PropTypes.shape({}).isRequired,
-    theme: PropTypes.shape({}).isRequired,
+    theme: PropTypes.shape({ direction: PropTypes.string }).isRequired,
     location: PropTypes.shape({
         search: PropTypes.string,
     }),
