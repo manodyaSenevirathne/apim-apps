@@ -34,6 +34,12 @@ describe("publisher-019-00 : Verify that read only user cannot create updte api"
     const initEnvironement = () => {
         //create developer user
         cy.carbonLogin(carbonUsername, carbonPassword);
+        // Ensure the Internal/observer role exists (not auto-created on existing tenants)
+        cy.ensureRoleExists('observer', 'Internal');
+
+        // Clean up any leftover users from previous failed runs
+        cy.searchAndDeleteUserIfExist(readOnlyUser);
+        cy.searchAndDeleteUserIfExist(creatorPublisher);
         //cy.addNewUser(readOnlyUser, ['Internal/observer'], readOnlyUserPassword);
         //cy.addNewUser(creatorPublisher,  ['Internal/publisher', 'Internal/creator', 'Internal/everyone'], creatorpublisherPassword);
 
@@ -310,14 +316,18 @@ describe("publisher-019-00 : Verify that read only user cannot create updte api"
     });
 
     afterEach(function () {
-        cy.get('#searchQuery').click().type(apiName + "{enter}");
-        cy.get("#itest-id-deleteapi-icon-button").click()
-        cy.get('#itest-id-deleteconf').click()
-        // delete observer user.
-
-        cy.visit(`/carbon/user/user-mgt.jsp`);
-        cy.deleteUser(readOnlyUser);
-        cy.deleteUser(creatorPublisher);
+        // Clear any active session before logging in as admin for cleanup
+        cy.clearCookies();
+        cy.clearLocalStorage();
+        cy.loginToPublisher(carbonUsername, carbonPassword);
+        cy.visit(`${Utils.getAppOrigin()}/publisher/apis`);
+        cy.get('#searchQuery', { timeout: Cypress.config().largeTimeout }).click().type(apiName + "{enter}");
+        cy.get("#itest-id-deleteapi-icon-button", { timeout: Cypress.config().largeTimeout }).click();
+        cy.get('#itest-id-deleteconf').click();
+        // delete users — carbonLogin first since clearCookies wiped the carbon session
+        cy.carbonLogin(carbonUsername, carbonPassword);
+        cy.searchAndDeleteUserIfExist(readOnlyUser);
+        cy.searchAndDeleteUserIfExist(creatorPublisher);
     })
 
 });

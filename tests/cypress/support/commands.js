@@ -26,6 +26,14 @@ import UsersManagementPage from "./pages/carbon/UsersManagementPage";
 import RolesManagementPage from "./pages/carbon/RolesManagementPage";
 import ApisHomePage from "./pages/publisher/ApisHomePage";
 
+// The devportal bundle throws `No partial token found` on a login/logout
+// race. Filter only this exact message so other exceptions stay visible.
+Cypress.on('uncaught:exception', (err) => {
+    if (err && err.message && err.message.includes('No partial token found')) {
+        return false;
+    }
+});
+
 const usersManagementPage = new UsersManagementPage();
 const rolesManagementPage = new RolesManagementPage();
 const addNewRolePage = new AddNewRoleEnterDetailsPage();
@@ -61,12 +69,16 @@ Cypress.Commands.add('portalLogin', (username, password, portal, tenant = 'carbo
         cy.wait(3000)
         cy.get('#itest-devportal-sign-in', { timeout: Cypress.config().largeTimeout }).wait(3000).click();
     }
-    cy.url().should('contains', `/authenticationendpoint/login.do`);
+    // Gate on the login form, not cy.url() — mid-redirect it can yield an
+    // undefined subject and throw a non-retryable chai error in before-all hooks.
+    cy.get('[data-testid=login-page-username-input]', { timeout: Cypress.config().largeTimeout })
+        .should('be.visible');
     cy.get('[data-testid=login-page-username-input]').click();
     cy.get('[data-testid=login-page-username-input]').type(username);
-    cy.get('[data-testid=login-page-password-input]').type(password);
+    cy.get('[data-testid=login-page-password-input]', { timeout: Cypress.config().largeTimeout }).type(password);
     cy.get('#loginForm').submit();
-    cy.url().should('contains', `/${portal}`);
+    // Null-safe subject — url() can be undefined during the OAuth redirect.
+    cy.url({ timeout: Cypress.config().largeTimeout }).should(url => expect(url || '').to.include(`/${portal}`));
 })
 
 Cypress.Commands.add('loginToPublisher', (username, password) => {
@@ -178,6 +190,27 @@ Cypress.Commands.add('deleteAllApis', () => {
     })
 });
 
+// Don't `return` — getApiToken yields a Cypress.Promise wrapping cy.* calls,
+// which would trip Cypress's "returned promise while invoking cy commands" detector.
+Cypress.Commands.add('waitForApiRetrievable', (apiId) => {
+    Utils.getApiToken().then((token) => {
+        Utils.waitForApiRetrievable(token, apiId);
+    });
+});
+
+/** Extract the API id from the current /publisher/apis/<id>/overview URL and
+ *  wait for it to be retrievable. No-op if the URL isn't an overview page. */
+Cypress.Commands.add('waitForCurrentApiRetrievable', () => {
+    cy.url().then((u) => {
+        const m = /\/apis\/([^/?#]+)\/overview/.exec(u || '');
+        if (m) {
+            cy.waitForApiRetrievable(m[1]);
+        } else {
+            cy.log(`waitForCurrentApiRetrievable: no /apis/<id>/overview id in URL (${u}); skipping`);
+        }
+    });
+});
+
 Cypress.Commands.add('createAnAPI', (name, type = 'REST') => {
     const random_number = Math.floor(Date.now() / 1000);
     const randomName = `0sample_api_${random_number}`;
@@ -224,6 +257,9 @@ Cypress.Commands.add('createAPIByRestAPIDesign', (name = null, version = null, c
         return false
     });
     cy.wait(5000);
+    // The create wizard has navigated to /apis/<id>/overview — wait until that
+    // API is retrievable before the next navigation. No-op if not on overview.
+    cy.waitForCurrentApiRetrievable();
     cy.visit(`/publisher/apis/`).wait(5000)
     cy.get(`#${apiName}`, { timeout: Cypress.config().largeTimeout }).click();
 
@@ -257,6 +293,10 @@ Cypress.Commands.add('createAndPublishAPIByRestAPIDesign', (name = null, version
     // Wait for the api to load
     cy.get('#itest-api-name-version', { timeout: Cypress.config().largeTimeout }).should('be.visible');
     cy.get('#itest-api-name-version').contains(apiVersion);
+
+    // The create-and-publish wizard has navigated to /apis/<id>/overview — wait
+    // until that API is retrievable. No-op if the URL isn't an overview page.
+    cy.waitForCurrentApiRetrievable();
 })
 
 
@@ -827,6 +867,23 @@ Cypress.Commands.add('addNewRole', (roleName = 'newrole', domain = "PRIMARY", pe
     selectPermission.getMessageBoxOkButton().click()
 })
 
+Cypress.Commands.add('ensureRoleExists', (roleName, domain = 'PRIMARY') => {
+    const fullRoleName = domain === 'PRIMARY' ? roleName : `${domain}/${roleName}`;
+    const WAIT_TIME_FOR_DIALOG_BOX_TO_APPEAR = 3000;
+    cy.visit(`${Utils.getAppOrigin()}` + rolesManagementPage.getUrl());
+    rolesManagementPage.getRoleNameTextBox().clear().type(fullRoleName);
+    rolesManagementPage.getSearchRolesButton().click();
+    cy.wait(WAIT_TIME_FOR_DIALOG_BOX_TO_APPEAR);
+    cy.get('body').then(($body) => {
+        if ($body.find('#messagebox-info').length > 0) {
+            // Role not found - dismiss dialog and create it
+            cy.get('.ui-dialog-buttonpane button').first().click();
+            cy.addNewRole(roleName, domain, []);
+        }
+        // If role exists, do nothing
+    });
+})
+
 Cypress.Commands.add('deleteRole', (roleName) => {
 
     cy.log(`Delete role ${roleName} ...`)
@@ -997,10 +1054,9 @@ Cypress.Commands.add('updateTenantConfig', (username, password, tenant, config) 
     // Try to improve this
     // Better to modify the API response accordingly instead of mocking the entire API call
     
-    const baseUrl = Cypress.config('baseUrl'); 
-    const url = new URL(baseUrl); 
-    const hostname = url.hostname; 
-    cy.intercept('GET', `https://${hostname}:9443/api/am/admin/v4/tenant-config`, {
+    // Host-agnostic glob: a hardcoded localhost/host match misses when the suite
+    // runs against a LAN IP, silently leaving the stub un-fired.
+    cy.intercept('GET', '**/api/am/admin/v4/tenant-config', {
         statusCode: 200,
         body: config
     });
