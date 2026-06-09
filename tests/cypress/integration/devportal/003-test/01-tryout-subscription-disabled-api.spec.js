@@ -21,8 +21,8 @@ import Utils from "@support/utils";
 describe("Try Out for subscription-disabled API", () => {
     const { publisher, developer, password } = Utils.getUserInfo();
     const apiVersion = '1.0.0';
-    const apiName = Utils.generateName();
     let testApiId;
+    let apiName;
 
     it.only("Try Out skips subscribe step and reaches API Console for subscription-disabled API", {
         retries: {
@@ -31,17 +31,41 @@ describe("Try Out for subscription-disabled API", () => {
         },
     }, () => {
         cy.loginToPublisher(publisher, password);
+        apiName = Utils.generateName();
 
-        const payload = `{"name":"${apiName}","version":"${apiVersion}","context":"${apiName}","policies":["DefaultSubscriptionless"],"endpointConfig":{"endpoint_type":"http","sandbox_endpoints":{"url":"https://lh"},"production_endpoints":{"url":"https://lh"}}}`;
-
-        Utils.addAPI({ name: apiName, version: apiVersion, payload }).then((apiId) => {
+        Utils.addAPIWithEndpoints({
+            name: apiName,
+            version: apiVersion,
+            endpoint: 'https://petstore.swagger.io/v2/swagger.json',
+        }).then((apiId) => {
             testApiId = apiId;
 
+            // Navigate to the Subscriptions page and uncheck the Unlimited policy
+            cy.visit(`/publisher/apis/${apiId}/overview`);
+            cy.get('#itest-api-details-portal-config-acc').click();
+            cy.get('#left-menu-itemsubscriptions').click();
+            cy.get('[data-testid="policy-checkbox-unlimited"]').click();
+            cy.get('#subscriptions-save-btn').click();
+            // Confirm the caution dialog if it appears (shown when existing subscribers are present)
+            cy.get('body').then(($body) => {
+                if ($body.find('button:contains("Yes")').length > 0) {
+                    cy.contains('button', 'Yes').click();
+                }
+            });
+            cy.get('[data-testid="policy-checkbox-unlimited"] input').should('not.be.checked');
+
+            // Publish and deploy via Publisher UI (same pattern as other e2e tests)
             Utils.publishAPI(apiId).then(() => {
+                cy.visit(`/publisher/apis/${apiId}/overview`);
+                cy.get('#left-menu-itemdeployments').should('be.visible').click();
+                cy.get('#deploy-btn').should('not.have.class', 'Mui-disabled').click({ force: true });
+                cy.get('#undeploy-btn', { timeout: Cypress.config().largeTimeout }).should('exist');
+
                 cy.logoutFromPublisher();
                 cy.loginToDevportal(developer, password);
                 Cypress.on('uncaught:exception', () => false);
 
+                // Navigate to the API in the DevPortal
                 cy.visit(`/devportal/apis/${apiId}/overview?tenant=carbon.super`);
 
                 // The Try Out button that opens the modal should be present
