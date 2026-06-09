@@ -66,10 +66,13 @@ import AssistantIcon from '@mui/icons-material/Assistant';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import DescriptionIcon from '@mui/icons-material/Description';
+import BarChartIcon from '@mui/icons-material/BarChart';
 import ListApis from '../APISettings/ListApis';
 import UsageReport from '../APISettings/UsageReport';
 import ListLabels from '../Labels/ListLabels';
 import ComplianceDashboard from '../Governance/ComplianceDashboard';
+import ExportConsumptionData from '../ConsumptionData/ExportConsumptionData';
 
 const RouteMenuMapping = (intl) => [
     {
@@ -524,6 +527,26 @@ const RouteMenuMapping = (intl) => [
                 path: '/settings/usage-report',
                 component: UsageReport,
                 icon: <AssignmentIcon />,
+            },
+        ],
+    },
+    {
+        id: 'Reports',
+        displayText: intl.formatMessage({
+            id: 'Base.RouteMenuMapping.reports',
+            defaultMessage: 'Reports',
+        }),
+        icon: <DescriptionIcon />,
+        children: [
+            {
+                id: 'Consumption Data',
+                displayText: intl.formatMessage({
+                    id: 'Base.RouteMenuMapping.export.consumption.data',
+                    defaultMessage: 'Consumption Data',
+                }),
+                path: '/settings/consumption-data',
+                component: ExportConsumptionData,
+                icon: <BarChartIcon />,
             },
         ],
     },
