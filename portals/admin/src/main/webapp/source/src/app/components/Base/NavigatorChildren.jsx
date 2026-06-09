@@ -44,21 +44,25 @@ function NavigatorChildren(props) {
         setOpen(!open);
     };
 
-    const [navigationChildren, setNavigationChildren] = React.useState(navChildren); // Corrected useState syntax
+    const [navigationChildren, setNavigationChildren] = React.useState(navChildren);
 
     useEffect(() => {
-        let filteredNavChildren = [...navChildren]; // Start with the original array
+        let filteredNavChildren = [...navChildren];
         if (isSuperTenant) {
             filteredNavChildren = filteredNavChildren.filter((menu) => menu.id !== 'Tenant Theme');
         }
         if (!isSuperTenant) {
-            filteredNavChildren = filteredNavChildren.filter((menu) => menu.id !== 'Custom Policies');
+            filteredNavChildren = filteredNavChildren.filter((menu) => menu.id !== 'Custom Policies'
+                && menu.id !== 'Consumption Data');
         }
         if (!isSuperAdmin || !istransactionCounterEnabled) {
             filteredNavChildren = filteredNavChildren.filter((menu) => menu.id !== 'Usage Report');
         }
-        setNavigationChildren(filteredNavChildren); // Set the filtered array once
-    }, [isSuperTenant, isSuperAdmin, navChildren]);
+        if (isSuperTenant && (!settings || !settings.consumptionExportEnabled)) {
+            filteredNavChildren = filteredNavChildren.filter((menu) => menu.id !== 'Consumption Data');
+        }
+        setNavigationChildren(filteredNavChildren);
+    }, [isSuperTenant, isSuperAdmin, navChildren, settings]);
 
     return (
         <>

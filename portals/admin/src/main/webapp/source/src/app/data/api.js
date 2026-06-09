@@ -832,6 +832,25 @@ class API extends Resource {
     }
 
     /**
+     * Export consumption data as a ZIP file for a given date range.
+     * @param {string} fromDate - Start date (YYYY-MM-DD).
+     * @param {string} toDate - End date (YYYY-MM-DD).
+     * @returns {Promise} Promise resolving to the response with ZIP blob.
+     */
+    exportConsumptionData(fromDate, toDate) {
+        return this.client.then(
+            client => {
+                return client.apis['Consumption'].exportConsumptionData({
+                    fromDate,
+                    toDate,
+                }, this._requestMetaData({
+                    responseType: 'arraybuffer',
+                }));
+            },
+        );
+    }
+
+    /**
      * Export a Tenant Theme
      */
     exportTenantTheme() {

@@ -92,7 +92,7 @@ function Navigator(props) {
     } = props;
     const theme = useTheme();
     const intl = useIntl();
-    const { settings, user: { _scopes } } = useAppContext();
+    const { settings, isSuperTenant, user: { _scopes } } = useAppContext();
     const isAnalyticsEnabled = settings.analyticsEnabled;
     const matchMenuPath = (currentRoute, pathToMatch) => {
         return (currentRoute.indexOf(pathToMatch) !== -1);
@@ -100,6 +100,11 @@ function Navigator(props) {
     let routeMenuMapping = RouteMenuMapping(intl);
     if (!isAnalyticsEnabled) {
         routeMenuMapping = RouteMenuMapping(intl).filter((menu) => menu.id !== 'Manage Alerts');
+    }
+    // Hide Reports menu for non-super tenants or when consumption export is disabled
+    // Remove this condition when the Reports menu contains submenus other than Consumption Data
+    if (!isSuperTenant || !settings.consumptionExportEnabled) {
+        routeMenuMapping = routeMenuMapping.filter((menu) => menu.id !== 'Reports');
     }
 
     const hasPermission = (scopes) => {
