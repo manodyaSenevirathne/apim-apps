@@ -43,6 +43,10 @@ const Root = styled('div')(() => ({
     [`& .${classes.buttonGap}`]: {
         marginRight: 10,
     },
+
+    '[dir="rtl"] & [class*="MUIDataTable-responsiveStacked"]': {
+        overflowX: 'hidden',
+    },
 }));
 
 /**

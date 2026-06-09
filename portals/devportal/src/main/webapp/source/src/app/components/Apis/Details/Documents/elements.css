@@ -1,6 +1,6 @@
 #apim_elements {
     margin: 32px;
-    padding-right: 100px;
+    padding-inline-end: 100px;
 }
 
 #apim_elements blockquote,
@@ -12755,7 +12755,7 @@
 
 .sl-elements {
     font-size: 13px;
-    padding-right: 65px;
+    padding-inline-end: 65px;
 }
 
 .sl-elements .svg-inline--fa {
@@ -12827,4 +12827,8 @@
 
 .sl-flex.sl-flex-col.sl-w-full.sl-p-4 {
     width: inherit;
+}
+
+[dir="rtl"] .sl-elements-api > div {
+    direction: ltr;
 }

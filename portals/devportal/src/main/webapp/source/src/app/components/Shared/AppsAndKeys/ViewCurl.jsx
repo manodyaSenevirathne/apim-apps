@@ -105,7 +105,7 @@ function ViewCurl(props) {
                 </Typography>
 
                 <div className={classes.contentWrapper}>
-                    <div className={classes.code}>
+                    <div className={classes.code} dir='ltr'>
                         <div>
                             <span className={classes.command}>curl -k -X POST </span> {tokenEndpoint}
                             <span className={classes.command}> -d </span>{' '}
@@ -156,7 +156,7 @@ function ViewCurl(props) {
                     />
                 </Typography>
                 <div className={classes.contentWrapper}>
-                    <div className={classes.code}>
+                    <div className={classes.code} dir='ltr'>
                         <div>
                             <span className={classes.command}>curl -k -X POST </span> {tokenEndpoint}
                             <span className={classes.command}> -d </span>{' '}
@@ -235,7 +235,7 @@ function ViewCurl(props) {
                     </Typography>
 
                     <div className={classes.contentWrapper}>
-                        <div className={classes.code}>
+                        <div className={classes.code} dir='ltr'>
                             <div>
                                 <span className={classes.command}>curl -k -X POST </span> {defaultTokenEndpoint}
                                 <span className={classes.command}> -d </span>{' '}

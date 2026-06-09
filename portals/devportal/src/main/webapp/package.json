@@ -29,6 +29,7 @@
     "license": "Apache-2.0",
     "dependencies": {
         "@asyncapi/react-component": "2.6.3",
+        "@emotion/cache": "11.14.0",
         "@emotion/react": "^11.11.3",
         "@emotion/styled": "^11.11.0",
         "@graphiql/plugin-explorer": "5.1.1",
@@ -94,6 +95,8 @@
         "react-tagcloud": "^2.3.1",
         "remark-gfm": "^3.0.1",
         "stream-browserify": "^3.0.0",
+        "stylis": "4.4.0",
+        "stylis-plugin-rtl": "2.1.1",
         "swagger-client": "3.36.2",
         "swagger-ui-react": "5.32.1",
         "url": "^0.11.3",
@@ -202,7 +205,7 @@
         },
         "rimraf@3": "4.4.1",
         "@babel/runtime-corejs3": "7.27.6",
-        "postman-collection":{
+        "postman-collection": {
             "semver": "7.7.2"
         }
     }

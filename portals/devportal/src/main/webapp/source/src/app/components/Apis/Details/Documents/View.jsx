@@ -89,7 +89,7 @@ const Root = styled('div')((
     },
 
     [`& .${classes.displayURLLink}`]: {
-        paddingLeft: theme.spacing(2),
+        paddingInlineStart: theme.spacing(2),
     },
 
     [`& .${classes.docSummary}`]: {
@@ -99,7 +99,7 @@ const Root = styled('div')((
 
     [`& .${classes.fileAvailability}`]: {
         marginTop: theme.spacing(1),
-        marginLeft: theme.spacing(0.8),
+        marginInlineStart: theme.spacing(0.8),
     },
 }));
 

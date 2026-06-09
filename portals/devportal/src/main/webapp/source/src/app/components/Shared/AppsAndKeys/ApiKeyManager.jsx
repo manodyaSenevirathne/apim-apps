@@ -87,7 +87,7 @@ const StyledGrid = styled(Grid)((
   },
 
   [`& .${classes.margin}`]: {
-    marginRight: theme.spacing(2),
+    marginInlineEnd: theme.spacing(2),
   },
 
   [`& .${classes.keyConfigWrapper}`]: {
@@ -104,7 +104,7 @@ const StyledGrid = styled(Grid)((
     display: 'flex',
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(2),
-    marginLeft: theme.spacing(10),
+    marginInlineStart: theme.spacing(10),
   },
 
   [`& .${classes.dialogTitle}`]: {
@@ -263,6 +263,7 @@ class ApiKeyManager extends React.Component {
               component="div"
               variant="body2"
               className={classes.formLabel}
+              sx={{ marginInlineStart: 2 }}
             >
               <FormattedMessage
                 id="Shared.AppsAndKeys.ApiKeyManager.generate.key.help"
@@ -336,10 +337,10 @@ class ApiKeyManager extends React.Component {
                     }
                     values={{
                       linebreak: <br />,
-                      ip1: <b>192.168.1.2</b>,
-                      ip2: <b>152.12.0.0/13</b>,
-                      ip3: <b>2002:eb8::2</b>,
-                      ip4: <b>1001:ab8::/44</b>,
+                      ip1: <b dir='ltr'>192.168.1.2</b>,
+                      ip2: <b dir='ltr'>152.12.0.0/13</b>,
+                      ip3: <b dir='ltr'>2002:eb8::2</b>,
+                      ip4: <b dir='ltr'>1001:ab8::/44</b>,
                     }}
                   />
                 </Typography>
@@ -366,9 +367,9 @@ class ApiKeyManager extends React.Component {
                     }
                     values={{
                       linebreak: <br />,
-                      url1: <b>www.example.com/path</b>,
-                      url2: <b>sub.example.com/*</b>,
-                      url3: <b>*.example.com/*</b>,
+                      url1: <b dir='ltr'>www.example.com/path</b>,
+                      url2: <b dir='ltr'>sub.example.com/*</b>,
+                      url3: <b dir='ltr'>*.example.com/*</b>,
                     }}
                   />
                 </Typography>
