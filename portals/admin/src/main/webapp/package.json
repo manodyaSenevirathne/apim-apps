@@ -121,9 +121,6 @@
         "babel-jest": {
             "glob": "10.4.5"
         },
-        "clean-webpack-plugin": {
-            "del": "6.1.1"
-        },
         "rimraf@3": "4.4.1",
         "postman-collection": {
             "semver": "7.8.2"

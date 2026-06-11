@@ -138,7 +138,6 @@
         "babel-plugin-formatjs": "^10.5.16",
         "babel-plugin-styled-components": "^2.1.4",
         "buffer": "6.0.3",
-        "clean-webpack-plugin": "^4.0.0",
         "concurrently": "^6.4.0",
         "cross-env": "^7.0.0",
         "crypto-browserify": "^3.12.0",
@@ -211,9 +210,6 @@
         "lodash": "4.18.1",
         "babel-jest": {
             "glob": "10.4.5"
-        },
-        "clean-webpack-plugin": {
-            "del": "6.1.1"
         },
         "rimraf@3": "4.4.1",
         "postman-collection": {

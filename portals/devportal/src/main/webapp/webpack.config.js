@@ -19,7 +19,6 @@
  */
 var path = require('path');
 const webpack = require('webpack');
-const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const ESLintPlugin = require('eslint-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const DeadCodePlugin = require('webpack-deadcode-plugin');
@@ -45,6 +44,7 @@ module.exports = function (env, argv) {
             chunkFilename: isDevelopmentBuild ? '[name].chunk.bundle.js' : '[name].[contenthash].bundle.js',
             publicPath: 'site/public/dist/',
             globalObject: 'this',
+            clean: true,
         },
         watch: false,
         watchOptions: {
@@ -206,10 +206,6 @@ module.exports = function (env, argv) {
             MaterialIcons: 'MaterialIcons',
         },
         plugins: [
-            new CleanWebpackPlugin({
-                cleanOnceBeforeBuildPatterns: ['./js/build/*', './css/build/*'],
-                dangerouslyAllowCleanPatternsOutsideProject: true,
-            }),
             new HtmlWebpackPlugin({
                 inject: false,
                 template: path.resolve(__dirname, 'site/public/pages/index.jsp.hbs'),
