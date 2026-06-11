@@ -55,7 +55,7 @@
         "mui-datatables": "^4.3.0",
         "path-to-regexp": "^1.9.0",
         "prop-types": "^15.8.1",
-        "qs": "6.14.2",
+        "qs": "6.15.2",
         "rc-notification": "^4.6.1",
         "react": "^18.0.0",
         "react-app-polyfill": "^3.0.0",
@@ -110,7 +110,7 @@
         "style-loader": "^4.0.0",
         "underscore-template-loader": "^1.2.0",
         "util": "^0.12.5",
-        "webpack": "5.105.4",
+        "webpack": "5.107.2",
         "webpack-bundle-analyzer": "^4.10.2",
         "webpack-cli": "^5.1.4",
         "webpack-deadcode-plugin": "^0.1.17",
@@ -121,13 +121,11 @@
         "babel-jest": {
             "glob": "10.4.5"
         },
-        "clean-webpack-plugin": {
-            "del": "6.1.1"
-        },
         "rimraf@3": "4.4.1",
-        "@babel/runtime-corejs3" : "7.27.6",
-        "postman-collection":{
-            "semver": "7.7.2"
-        }
+        "postman-collection": {
+            "semver": "7.8.2"
+        },
+        "qs": "6.15.2",
+        "uuid": "14.0.0"
     }
 }

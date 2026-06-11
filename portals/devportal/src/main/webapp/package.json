@@ -46,13 +46,13 @@
         "ajv": "^8.12.0",
         "async-mutex": "^0.5.0",
         "autosuggest-highlight": "^3.3.4",
-        "axios": "1.15.2",
+        "axios": "1.16.1",
         "base64url": "3.0.1",
         "btoa": "^1.2.1",
         "caniuse-api": "^3.0.0",
         "dataloader": "^2.1.0",
         "dayjs": "^1.11.7",
-        "dompurify": "3.4.0",
+        "dompurify": "3.4.8",
         "downshift": "^6.1.12",
         "fetch-to-curl": "^0.6.0",
         "fs-react": "0.0.4",
@@ -73,7 +73,7 @@
         "openapi-to-postmanv2": "6.0.0",
         "path-to-regexp": "^1.9.0",
         "prop-types": "^15.8.1",
-        "qs": "6.14.2",
+        "qs": "6.15.2",
         "query-string": "^7.1.3",
         "random-material-color": "^1.0.5",
         "rc-notification": "^4.6.1",
@@ -122,8 +122,6 @@
         "babel-plugin-formatjs": "^10.5.16",
         "babel-plugin-react-intl-auto": "^3.3.0",
         "buffer": "^6.0.3",
-        "chai": "^4.0.2",
-        "clean-webpack-plugin": "^4.0.0",
         "cross-env": "^7.0.0",
         "crypto-browserify": "^3.12.0",
         "css-loader": "^7.1.2",
@@ -142,7 +140,6 @@
         "jest": "30.3.0",
         "less": "^4.2.0",
         "less-loader": "^12.2.0",
-        "mocha": "11.7.5",
         "mock-local-storage": "^1.0.5",
         "monaco-editor-webpack-plugin": "7.1.1",
         "prettier": "^2.5.1",
@@ -155,7 +152,7 @@
         "underscore-template-loader": "^1.1.0",
         "url-loader": "4.1.1",
         "vm-browserify": "^1.1.2",
-        "webpack": "5.105.4",
+        "webpack": "5.107.2",
         "webpack-bundle-analyzer": "^4.10.2",
         "webpack-cli": "^5.1.4",
         "webpack-deadcode-plugin": "^0.1.17",
@@ -200,13 +197,12 @@
         "babel-jest": {
             "glob": "10.4.5"
         },
-        "clean-webpack-plugin": {
-            "del": "6.1.1"
-        },
         "rimraf@3": "4.4.1",
-        "@babel/runtime-corejs3": "7.27.6",
         "postman-collection": {
-            "semver": "7.7.2"
-        }
+            "semver": "7.8.2"
+        },
+        "qs": "6.15.2",
+        "uuid": "14.0.0",
+        "js-cookie": "3.0.8"
     }
 }

@@ -18,7 +18,6 @@
  */
 const path = require('path');
 const DeadCodePlugin = require('webpack-deadcode-plugin');
-const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const ESLintPlugin = require('eslint-webpack-plugin');
 const webpack = require('webpack');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
@@ -47,6 +46,7 @@ module.exports = (env, argv) => {
                 ? '[name].chunk.bundle.js' : '[name].[contenthash].bundle.js',
             publicPath: 'site/public/dist/',
             globalObject: 'this',
+            clean: true,
         },
         watch: false,
         watchOptions: {
@@ -225,7 +225,6 @@ module.exports = (env, argv) => {
             Settings: 'Settings',
         },
         plugins: [
-            new CleanWebpackPlugin(),
             new HtmlWebpackPlugin({
                 inject: false,
                 template: path.resolve(__dirname, 'site/public/pages/index.jsp.hbs'),
