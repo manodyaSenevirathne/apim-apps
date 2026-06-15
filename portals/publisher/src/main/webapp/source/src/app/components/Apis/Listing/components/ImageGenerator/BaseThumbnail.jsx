@@ -169,7 +169,12 @@ const BaseThumbnail = (props) => {
         } else {
             setImageLoaded(true);
         }
-    }, [imageUpdate]);
+    }, [id, imageUpdate]);
+
+    useEffect(() => {
+        setThumbnail(thumbnailPop);
+    }, [thumbnailPop]);
+
     if (!imageLoaded) {
         return (
             <Root className='image-load-frame'>
