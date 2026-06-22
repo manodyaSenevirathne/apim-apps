@@ -197,6 +197,16 @@ const StyledDialog = styled(Dialog)((
     },
 }));
 
+function parseResponseData(response) {
+    if (response && response.body) {
+        return response.body;
+    }
+    if (response && response.data) {
+        return JSON.parse(response.data);
+    }
+    return null;
+}
+
 /**
  *
  *
@@ -230,6 +240,11 @@ class Subscriptions extends React.Component {
         this.handleSearchTextTmpChange = this.handleSearchTextTmpChange.bind(this);
         this.handleClearSearch = this.handleClearSearch.bind(this);
         this.handleEnterPress = this.handleEnterPress.bind(this);
+        this.getAPIById = this.getAPIById.bind(this);
+        this.getSubscriptionPolicyByName = this.getSubscriptionPolicyByName.bind(this);
+        this.resetPageDataCache = this.resetPageDataCache.bind(this);
+        this.apiDetailsById = {};
+        this.subscriptionPoliciesByName = {};
         this.searchTextTmp = '';
     }
 
@@ -243,8 +258,35 @@ class Subscriptions extends React.Component {
         this.updateSubscriptions(applicationId);
     }
 
+    componentWillUnmount() {
+        this.resetPageDataCache();
+    }
+
     handleOpenDialog() {
         this.setState((prevState) => ({ openDialog: !prevState.openDialog, searchText: '' }));
+    }
+
+    resetPageDataCache() {
+        this.apiDetailsById = {};
+        this.subscriptionPoliciesByName = {};
+    }
+
+    getAPIById(apiUUID) {
+        if (!this.apiDetailsById[apiUUID]) {
+            const apiClient = new Api();
+            this.apiDetailsById[apiUUID] = apiClient.getAPIById(apiUUID).then(parseResponseData);
+        }
+        return this.apiDetailsById[apiUUID];
+    }
+
+    getSubscriptionPolicyByName(policyName) {
+        if (!this.subscriptionPoliciesByName[policyName]) {
+            const apiClient = new Api();
+            this.subscriptionPoliciesByName[policyName] = apiClient
+                .getTierByName(policyName, 'subscription')
+                .then(parseResponseData);
+        }
+        return this.subscriptionPoliciesByName[policyName];
     }
 
     /**
@@ -280,6 +322,7 @@ class Subscriptions extends React.Component {
         const promisedSubscriptions = client.getSubscriptions(null, applicationId, subscriptionLimit);
         promisedSubscriptions
             .then((response) => {
+                this.resetPageDataCache();
                 this.setState({ subscriptions: response.body.list });
                 this.checkSubValidationDisabled(response.body.list);
             })
@@ -628,6 +671,10 @@ class Subscriptions extends React.Component {
                                                                                 }
                                                                                 handleSubscriptionUpdate={
                                                                                     this.handleSubscriptionUpdate
+                                                                                }
+                                                                                getAPIById={this.getAPIById}
+                                                                                getSubscriptionPolicyByName={
+                                                                                    this.getSubscriptionPolicyByName
                                                                                 }
                                                                             />
                                                                         );

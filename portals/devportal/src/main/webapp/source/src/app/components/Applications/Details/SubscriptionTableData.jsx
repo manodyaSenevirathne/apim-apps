@@ -36,7 +36,6 @@ import HelpOutline from '@mui/icons-material/HelpOutline';
 import { FormattedMessage } from 'react-intl';
 import { ScopeValidation, resourceMethods, resourcePaths } from 'AppComponents/Shared/ScopeValidation';
 import PropTypes from 'prop-types';
-import Api from 'AppData/api';
 import CONSTANTS from 'AppData/Constants';
 import Subscription from 'AppData/Subscription';
 import { mdiOpenInNew } from '@mdi/js';
@@ -44,45 +43,6 @@ import { Icon as MDIcon } from '@mdi/react';
 import Popover from '@mui/material/Popover';
 import Invoice from './Invoice';
 import WebHookDetails from './WebHookDetails';
-
-const apiDetailsCache = {};
-const subscriptionPolicyCache = {};
-
-function parseResponseData(response) {
-    if (response && response.body) {
-        return response.body;
-    }
-    if (response && response.data) {
-        return JSON.parse(response.data);
-    }
-    return null;
-}
-
-function getAPIById(apiUUID) {
-    if (!apiDetailsCache[apiUUID]) {
-        const apiClient = new Api();
-        apiDetailsCache[apiUUID] = apiClient.getAPIById(apiUUID)
-            .then(parseResponseData)
-            .catch((error) => {
-                delete apiDetailsCache[apiUUID];
-                throw error;
-            });
-    }
-    return apiDetailsCache[apiUUID];
-}
-
-function getSubscriptionPolicyByName(policyName) {
-    if (!subscriptionPolicyCache[policyName]) {
-        const apiClient = new Api();
-        subscriptionPolicyCache[policyName] = apiClient.getTierByName(policyName, 'subscription')
-            .then(parseResponseData)
-            .catch((error) => {
-                delete subscriptionPolicyCache[policyName];
-                throw error;
-            });
-    }
-    return subscriptionPolicyCache[policyName];
-}
 
 /**
  *
@@ -210,6 +170,7 @@ class SubscriptionTableData extends React.Component {
      *
      */
     populateAPIData(apiUUID) {
+        const { getAPIById } = this.props;
         const promisedApi = getAPIById(apiUUID);
         promisedApi.then((api) => {
             if (this.mounted && api) {
@@ -238,9 +199,9 @@ class SubscriptionTableData extends React.Component {
             if (this.mounted && response && response.body) {
                 const subscriptionData = JSON.parse(response.data);
                 if (subscriptionData.throttlingPolicy) {
+                    const { getSubscriptionPolicyByName } = this.props;
                     const promisedPolicy = getSubscriptionPolicyByName(subscriptionData.throttlingPolicy);
-                    promisedPolicy.then((policyResponse) => {
-                        const policyData = parseResponseData(policyResponse) || policyResponse;
+                    promisedPolicy.then((policyData) => {
                         if (this.mounted && policyData.monetizationAttributes.billingType
                             && (policyData.monetizationAttributes.billingType
                                 === 'DYNAMICRATE')) {
@@ -614,5 +575,7 @@ SubscriptionTableData.propTypes = {
     }).isRequired,
     handleSubscriptionDelete: PropTypes.func.isRequired,
     handleSubscriptionUpdate: PropTypes.func.isRequired,
+    getAPIById: PropTypes.func.isRequired,
+    getSubscriptionPolicyByName: PropTypes.func.isRequired,
 };
 export default SubscriptionTableData;
