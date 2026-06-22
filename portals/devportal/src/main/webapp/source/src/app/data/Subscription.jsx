@@ -35,12 +35,13 @@ export default class Subscription extends Resource {
      * @param apiId id of the API
      * @param applicationId id of the application 
      * @param limit subscription count to return
+     * @param offset subscription list offset
      * @returns {promise} With all subscription for given applicationId or apiId.
      */
-    getSubscriptions(apiId, applicationId, limit = 25) {
+    getSubscriptions(apiId, applicationId, limit = 25, offset = 0) {
         var promise_get = this.client.then((client) => {
             return client.apis["Subscriptions"].get_subscriptions(
-                { apiId: apiId, applicationId: applicationId, limit });
+                { apiId: apiId, applicationId: applicationId, limit, offset });
         }
         );
         return promise_get;
@@ -114,4 +115,3 @@ export default class Subscription extends Resource {
         return promised_update_subscription;
     }
 }
-
