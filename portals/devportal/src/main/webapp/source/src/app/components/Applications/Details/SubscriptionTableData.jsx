@@ -46,6 +46,7 @@ import Invoice from './Invoice';
 import WebHookDetails from './WebHookDetails';
 
 const apiDetailsCache = {};
+const subscriptionPolicyCache = {};
 
 function parseResponseData(response) {
     if (response && response.body) {
@@ -68,6 +69,19 @@ function getAPIById(apiUUID) {
             });
     }
     return apiDetailsCache[apiUUID];
+}
+
+function getSubscriptionPolicyByName(policyName) {
+    if (!subscriptionPolicyCache[policyName]) {
+        const apiClient = new Api();
+        subscriptionPolicyCache[policyName] = apiClient.getTierByName(policyName, 'subscription')
+            .then(parseResponseData)
+            .catch((error) => {
+                delete subscriptionPolicyCache[policyName];
+                throw error;
+            });
+    }
+    return subscriptionPolicyCache[policyName];
 }
 
 /**
@@ -224,10 +238,9 @@ class SubscriptionTableData extends React.Component {
             if (this.mounted && response && response.body) {
                 const subscriptionData = JSON.parse(response.data);
                 if (subscriptionData.throttlingPolicy) {
-                    const apiClient = new Api();
-                    const promisedPolicy = apiClient.getTierByName(subscriptionData.throttlingPolicy, 'subscription');
+                    const promisedPolicy = getSubscriptionPolicyByName(subscriptionData.throttlingPolicy);
                     promisedPolicy.then((policyResponse) => {
-                        const policyData = JSON.parse(policyResponse.data);
+                        const policyData = parseResponseData(policyResponse) || policyResponse;
                         if (this.mounted && policyData.monetizationAttributes.billingType
                             && (policyData.monetizationAttributes.billingType
                                 === 'DYNAMICRATE')) {
