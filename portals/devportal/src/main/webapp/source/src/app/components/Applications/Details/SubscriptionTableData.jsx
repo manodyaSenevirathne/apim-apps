@@ -45,6 +45,31 @@ import Popover from '@mui/material/Popover';
 import Invoice from './Invoice';
 import WebHookDetails from './WebHookDetails';
 
+const apiDetailsCache = {};
+
+function parseResponseData(response) {
+    if (response && response.body) {
+        return response.body;
+    }
+    if (response && response.data) {
+        return JSON.parse(response.data);
+    }
+    return null;
+}
+
+function getAPIById(apiUUID) {
+    if (!apiDetailsCache[apiUUID]) {
+        const apiClient = new Api();
+        apiDetailsCache[apiUUID] = apiClient.getAPIById(apiUUID)
+            .then(parseResponseData)
+            .catch((error) => {
+                delete apiDetailsCache[apiUUID];
+                throw error;
+            });
+    }
+    return apiDetailsCache[apiUUID];
+}
+
 /**
  *
  *
@@ -73,8 +98,7 @@ class SubscriptionTableData extends React.Component {
         this.handleRequestOpen = this.handleRequestOpen.bind(this);
         this.handleRequestDelete = this.handleRequestDelete.bind(this);
         this.checkIfDynamicUsagePolicy = this.checkIfDynamicUsagePolicy.bind(this);
-        this.checkIfMonetizedAPI = this.checkIfMonetizedAPI.bind(this);
-        this.populateSubscriptionTiers = this.populateSubscriptionTiers.bind(this);
+        this.populateAPIData = this.populateAPIData.bind(this);
         this.handleSubscriptionTierUpdate = this.handleSubscriptionTierUpdate.bind(this);
         this.handleRequestCloseEditMenu = this.handleRequestCloseEditMenu.bind(this);
         this.handleRequestOpenEditMenu = this.handleRequestOpenEditMenu.bind(this);
@@ -85,10 +109,14 @@ class SubscriptionTableData extends React.Component {
     }
 
     componentDidMount() {
-        this.checkIfMonetizedAPI(this.props.subscription.apiId);
+        this.mounted = true;
+        this.populateAPIData(this.props.subscription.apiId);
         this.checkIfDynamicUsagePolicy(this.props.subscription.subscriptionId);
-        this.populateSubscriptionTiers(this.props.subscription.apiId);
         this.checkIfWebhookAPI();
+    }
+
+    componentWillUnmount() {
+        this.mounted = false;
     }
 
     /**
@@ -167,34 +195,20 @@ class SubscriptionTableData extends React.Component {
      * Getting the policies from api details
      *
      */
-    populateSubscriptionTiers(apiUUID) {
-        const apiClient = new Api();
-        const promisedApi = apiClient.getAPIById(apiUUID);
-        promisedApi.then((response) => {
-            if (response && response.data) {
-                const api = JSON.parse(response.data);
-                const apiTiers = api.tiers;
+    populateAPIData(apiUUID) {
+        const promisedApi = getAPIById(apiUUID);
+        promisedApi.then((api) => {
+            if (this.mounted && api) {
+                const apiTiers = api.tiers || [];
                 const tiers = [];
                 for (let i = 0; i < apiTiers.length; i++) {
                     const { tierName } = apiTiers[i];
                     tiers.push({ value: tierName, label: tierName });
                 }
-                this.setState({ tiers });
-            }
-        });
-    }
-
-    /**
-     * Check if the API is monetized
-     * @param apiUUID API UUID
-     */
-    checkIfMonetizedAPI(apiUUID) {
-        const apiClient = new Api();
-        const promisedApi = apiClient.getAPIById(apiUUID);
-        promisedApi.then((response) => {
-            if (response && response.data) {
-                const apiData = JSON.parse(response.data);
-                this.setState({ isMonetizedAPI: apiData.monetization.enabled });
+                this.setState({
+                    tiers,
+                    isMonetizedAPI: api.monetization && api.monetization.enabled,
+                });
             }
         });
     }
@@ -207,14 +221,14 @@ class SubscriptionTableData extends React.Component {
         const client = new Subscription();
         const promisedSubscription = client.getSubscription(subscriptionUUID);
         promisedSubscription.then((response) => {
-            if (response && response.body) {
+            if (this.mounted && response && response.body) {
                 const subscriptionData = JSON.parse(response.data);
                 if (subscriptionData.throttlingPolicy) {
                     const apiClient = new Api();
                     const promisedPolicy = apiClient.getTierByName(subscriptionData.throttlingPolicy, 'subscription');
                     promisedPolicy.then((policyResponse) => {
                         const policyData = JSON.parse(policyResponse.data);
-                        if (policyData.monetizationAttributes.billingType
+                        if (this.mounted && policyData.monetizationAttributes.billingType
                             && (policyData.monetizationAttributes.billingType
                                 === 'DYNAMICRATE')) {
                             this.setState({ isDynamicUsagePolicy: true });
