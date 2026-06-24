@@ -202,9 +202,10 @@ class SubscriptionTableData extends React.Component {
                     const { getSubscriptionPolicyByName } = this.props;
                     const promisedPolicy = getSubscriptionPolicyByName(subscriptionData.throttlingPolicy);
                     promisedPolicy.then((policyData) => {
-                        if (this.mounted && policyData.monetizationAttributes.billingType
-                            && (policyData.monetizationAttributes.billingType
-                                === 'DYNAMICRATE')) {
+                        if (this.mounted
+                            && policyData
+                            && policyData.monetizationAttributes
+                            && policyData.monetizationAttributes.billingType === 'DYNAMICRATE') {
                             this.setState({ isDynamicUsagePolicy: true });
                         }
                     });

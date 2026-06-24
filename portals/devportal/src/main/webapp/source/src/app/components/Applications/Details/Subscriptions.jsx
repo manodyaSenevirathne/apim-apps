@@ -214,11 +214,11 @@ const StyledDialog = styled(Dialog)((
 }));
 
 function parseResponseData(response) {
-    if (response && response.body) {
-        return response.body;
-    }
     if (response && response.data) {
-        return JSON.parse(response.data);
+        return typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+    }
+    if (response && response.body) {
+        return typeof response.body === 'string' ? JSON.parse(response.body) : response.body;
     }
     return null;
 }
@@ -275,6 +275,9 @@ class Subscriptions extends React.Component {
         this.apiDetailsById = {};
         this.subscriptionPoliciesByName = {};
         this.searchTextTmp = '';
+        this.mounted = false;
+        this.subscriptionsRequestId = 0;
+        this.dialogLoadRequestId = 0;
     }
 
     /**
@@ -283,17 +286,22 @@ class Subscriptions extends React.Component {
      * @memberof Subscriptions
      */
     componentDidMount() {
+        this.mounted = true;
         const { applicationId } = this.props.application;
         this.updateSubscriptions(applicationId);
     }
 
     componentWillUnmount() {
+        this.mounted = false;
+        this.subscriptionsRequestId += 1;
+        this.dialogLoadRequestId += 1;
         this.resetPageDataCache();
     }
 
     handleOpenDialog() {
         const { applicationId } = this.props.application;
         this.searchTextTmp = '';
+        this.dialogLoadRequestId += 1;
         this.setState((prevState) => ({
             openDialog: !prevState.openDialog,
             searchText: '',
@@ -334,8 +342,12 @@ class Subscriptions extends React.Component {
      * @param {*} subList Subscriptions list reponse object
      * @param {*} total subscription count
      * @param {*} applicationId application id
+     * @param {*} requestId current subscriptions request id
      */
-    checkSubValidationDisabled(subList, total, applicationId) {
+    checkSubValidationDisabled(subList, total, applicationId, requestId) {
+        if (!this.mounted || requestId !== this.subscriptionsRequestId) {
+            return;
+        }
         if (!subList || subList.length === 0 || !subList.every(isPseudoSubscription)) {
             this.setState({ pseudoSubscriptions: false });
             return;
@@ -348,13 +360,17 @@ class Subscriptions extends React.Component {
 
         this.loadAllSubscriptions(applicationId)
             .then((subscriptions) => {
-                this.setState({
-                    pseudoSubscriptions: subscriptions.length === total
-                        && subscriptions.every(isPseudoSubscription),
-                });
+                if (this.mounted && requestId === this.subscriptionsRequestId) {
+                    this.setState({
+                        pseudoSubscriptions: subscriptions.length === total
+                            && subscriptions.every(isPseudoSubscription),
+                    });
+                }
             })
             .catch(() => {
-                this.setState({ pseudoSubscriptions: false });
+                if (this.mounted && requestId === this.subscriptionsRequestId) {
+                    this.setState({ pseudoSubscriptions: false });
+                }
             });
     }
 
@@ -394,10 +410,14 @@ class Subscriptions extends React.Component {
      * @memberof Subscriptions
      */
     updateSubscriptions(applicationId, offset = 0) {
+        const requestId = ++this.subscriptionsRequestId;
         const client = new Subscription();
         const promisedSubscriptions = client.getSubscriptions(null, applicationId, SUBSCRIPTIONS_PER_PAGE, offset);
         promisedSubscriptions
             .then((response) => {
+                if (!this.mounted || requestId !== this.subscriptionsRequestId) {
+                    return;
+                }
                 const { body } = response;
                 const pagination = body.pagination || {};
                 const subscriptionCount = pagination.total || body.count || 0;
@@ -407,9 +427,12 @@ class Subscriptions extends React.Component {
                     subscriptionCount,
                     subscriptionOffset: pagination.offset || offset,
                 });
-                this.checkSubValidationDisabled(body.list, subscriptionCount, applicationId);
+                this.checkSubValidationDisabled(body.list, subscriptionCount, applicationId, requestId);
             })
             .catch((error) => {
+                if (!this.mounted || requestId !== this.subscriptionsRequestId) {
+                    return;
+                }
                 const { status } = error;
                 if (status === 404) {
                     this.setState({ subscriptionsNotFound: true });
@@ -427,19 +450,25 @@ class Subscriptions extends React.Component {
      * @memberof Subscriptions
      */
     updateDialogSubscriptions(applicationId) {
+        const requestId = ++this.dialogLoadRequestId;
         return this.loadAllSubscriptions(applicationId)
             .then((dialogSubscriptions) => {
-                if (this.state.openDialog && this.props.application.applicationId === applicationId) {
+                if (this.mounted
+                    && requestId === this.dialogLoadRequestId
+                    && this.state.openDialog
+                    && this.props.application.applicationId === applicationId) {
                     this.setState({ dialogSubscriptions });
                 }
                 return null;
             })
             .catch((error) => {
-                const { status } = error;
-                if (status === 401) {
-                    this.setState({ isAuthorize: false });
-                } else {
-                    this.setState({ dialogSubscriptions: [] });
+                if (this.mounted && requestId === this.dialogLoadRequestId) {
+                    const { status } = error;
+                    if (status === 401) {
+                        this.setState({ isAuthorize: false });
+                    } else {
+                        this.setState({ dialogSubscriptions: [] });
+                    }
                 }
             });
     }
@@ -462,6 +491,9 @@ class Subscriptions extends React.Component {
 
         promisedDelete
             .then((response) => {
+                if (!this.mounted) {
+                    return;
+                }
                 if (response.status === 200) {
                     Alert.info(intl.formatMessage({
                         defaultMessage: 'Subscription deleted successfully!',
@@ -496,6 +528,9 @@ class Subscriptions extends React.Component {
                 this.props.getApplication();
             })
             .catch((error) => {
+                if (!this.mounted) {
+                    return;
+                }
                 const { status } = error;
                 if (status === 401) {
                     this.setState({ isAuthorize: false });
@@ -532,6 +567,9 @@ class Subscriptions extends React.Component {
 
         promisedUpdate
             .then((response) => {
+                if (!this.mounted) {
+                    return;
+                }
                 if (response.status !== 200 && response.status !== 201) {
                     console.log(response);
                     Alert.info(intl.formatMessage({
@@ -557,6 +595,9 @@ class Subscriptions extends React.Component {
                 this.props.getApplication();
             })
             .catch((error) => {
+                if (!this.mounted) {
+                    return;
+                }
                 const { status: statusInner } = error;
                 if (statusInner === 401) {
                     this.setState({ isAuthorize: false });
@@ -589,6 +630,9 @@ class Subscriptions extends React.Component {
         const promisedSubscribe = api.subscribe(apiId, applicationId, policy);
         promisedSubscribe
             .then((response) => {
+                if (!this.mounted) {
+                    return;
+                }
                 if (response.status !== 201) {
                     Alert.error(intl.formatMessage({
                         id: 'Applications.Details.Subscriptions.error.occurred.during.subscription.not.201',
@@ -622,6 +666,9 @@ class Subscriptions extends React.Component {
                 }
             })
             .catch((error) => {
+                if (!this.mounted) {
+                    return;
+                }
                 const { status } = error;
                 if (status === 401) {
                     this.setState({ isAuthorize: false });
