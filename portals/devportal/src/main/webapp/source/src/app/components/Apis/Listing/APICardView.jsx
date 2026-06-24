@@ -29,6 +29,7 @@ import ResourceNotFound from '../../Base/Errors/ResourceNotFound';
 import SubscriptionPolicySelect from './SubscriptionPolicySelect';
 
 const PREFIX = 'APICardView';
+const API_PAGE_SIZE = 100;
 
 const classes = {
     root: `${PREFIX}-root`,
@@ -65,9 +66,10 @@ class APICardView extends React.Component {
             loading: true,
         };
         this.page = 0;
-        this.count = 100;
+        this.count = 0;
         this.rowsPerPage = 10;
         this.pageType = null;
+        this.allData = [];
     }
 
     /**
@@ -93,13 +95,14 @@ class APICardView extends React.Component {
     // get data
     getData = () => {
         const { intl } = this.props;
-        this.xhrRequest()
-            .then((data) => {
-                const { body } = data;
-                const { list, pagination } = body;
-                const { total } = pagination;
-                this.count = total;
-                this.setState({ data: this.updateUnsubscribedAPIsList(list) });
+        this.loadAllAPIs()
+            .then((apis) => {
+                this.page = 0;
+                this.allData = this.updateUnsubscribedAPIsList(apis);
+                this.count = this.allData.length;
+                this.setState({
+                    data: this.allData.slice(0, this.rowsPerPage),
+                });
             })
             .catch((error) => {
                 const { response } = error;
@@ -139,38 +142,41 @@ class APICardView extends React.Component {
     }
 
     changePage = (page) => {
-        const { intl } = this.props;
         this.page = page;
-        this.setState({ loading: true });
-        this.xhrRequest()
-            .then((data) => {
-                const { body } = data;
-                const { list } = body;
-                this.setState({
-                    data: this.updateUnsubscribedAPIsList(list),
-                });
-            })
-            .catch(() => {
-                Alert.error(intl.formatMessage({
-                    defaultMessage: 'Error While Loading APIs',
-                    id: 'Apis.Listing.ApiTableView.error.loading',
-                }));
-            })
-            .finally(() => {
-                this.setState({ loading: false });
-            });
+        const start = page * this.rowsPerPage;
+        this.setState({
+            data: this.allData.slice(start, start + this.rowsPerPage),
+        });
     };
 
-    xhrRequest = () => {
+    /**
+     * Load all published APIs before applying filters used by this dialog.
+     * @param {number} offset backend pagination offset
+     * @param {Array} accumulatedAPIs APIs collected from previous pages
+     * @returns {Promise<Array>} complete API list
+     */
+    loadAllAPIs = (offset = 0, accumulatedAPIs = []) => {
         const { searchText } = this.props;
-        const { page, rowsPerPage } = this;
         const api = new API();
+        const query = searchText && searchText !== ''
+            ? `${searchText} status:published` : 'status:published';
 
-        if (searchText && searchText !== '') {
-            return api.getAllAPIs({ query: `${searchText} status:published`, limit: this.rowsPerPage, offset: page * rowsPerPage });
-        } else {
-            return api.getAllAPIs({ query: 'status:published', limit: this.rowsPerPage, offset: page * rowsPerPage });
-        }
+        return api.getAllAPIs({ query, limit: API_PAGE_SIZE, offset })
+            .then((response) => {
+                const { body } = response;
+                const pagination = body.pagination || {};
+                const apiList = body.list || [];
+                const apis = accumulatedAPIs.concat(apiList);
+                const total = pagination.total || apis.length;
+                const limit = pagination.limit || API_PAGE_SIZE;
+                const currentOffset = pagination.offset || offset;
+                const nextOffset = currentOffset + limit;
+
+                if (apis.length < total && apiList.length > 0) {
+                    return this.loadAllAPIs(nextOffset, apis);
+                }
+                return apis;
+            });
     };
 
     /**
@@ -311,11 +317,14 @@ class APICardView extends React.Component {
             rowsPerPage,
             onChangeRowsPerPage: (numberOfRows) => {
                 const { page: pageInner, count: countInner } = this;
-                if (pageInner * numberOfRows > countInner) {
+                if (pageInner * numberOfRows >= countInner) {
                     this.page = 0;
                 }
                 this.rowsPerPage = numberOfRows;
-                this.getData();
+                const start = this.page * this.rowsPerPage;
+                this.setState({
+                    data: this.allData.slice(start, start + this.rowsPerPage),
+                });
             },
             textLabels: {
                 pagination: {
