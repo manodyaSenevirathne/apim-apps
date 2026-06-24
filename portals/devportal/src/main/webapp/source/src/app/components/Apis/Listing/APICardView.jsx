@@ -29,7 +29,6 @@ import ResourceNotFound from '../../Base/Errors/ResourceNotFound';
 import SubscriptionPolicySelect from './SubscriptionPolicySelect';
 
 const PREFIX = 'APICardView';
-const API_PAGE_SIZE = 100;
 
 const classes = {
     root: `${PREFIX}-root`,
@@ -69,14 +68,28 @@ class APICardView extends React.Component {
         this.count = 0;
         this.rowsPerPage = 10;
         this.pageType = null;
-        this.allData = [];
+        this.visibleAPIs = [];
+        this.apiOffset = 0;
+        this.apiTotal = null;
+        this.allAPIsLoaded = false;
+        this.apiLoadRequestId = 0;
+        this.mounted = false;
     }
 
     /**
      * component mount callback
      */
     componentDidMount() {
+        this.mounted = true;
         this.getData();
+    }
+
+    /**
+     * component unmount callback
+     */
+    componentWillUnmount() {
+        this.mounted = false;
+        this.apiLoadRequestId++;
     }
 
     /**
@@ -85,9 +98,13 @@ class APICardView extends React.Component {
     componentDidUpdate(prevProps) {
         const { subscriptions, searchText } = this.props;
         if (subscriptions.length !== prevProps.subscriptions.length) {
+            this.resetAPICache();
+            this.setState({ loading: true });
             this.getData();
         } else if (searchText !== prevProps.searchText) {
             this.page = 0;
+            this.resetAPICache();
+            this.setState({ loading: true });
             this.getData();
         }
     }
@@ -95,16 +112,17 @@ class APICardView extends React.Component {
     // get data
     getData = () => {
         const { intl } = this.props;
-        this.loadAllAPIs()
-            .then((apis) => {
-                this.page = 0;
-                this.allData = this.updateUnsubscribedAPIsList(apis);
-                this.count = this.allData.length;
-                this.setState({
-                    data: this.allData.slice(0, this.rowsPerPage),
-                });
+        const requestId = this.apiLoadRequestId;
+        this.loadPage(this.page, requestId)
+            .then((data) => {
+                if (this.mounted && requestId === this.apiLoadRequestId) {
+                    this.setState({ data });
+                }
             })
             .catch((error) => {
+                if (!this.mounted || requestId !== this.apiLoadRequestId) {
+                    return;
+                }
                 const { response } = error;
                 const { setTenantDomain } = this.props;
                 if (response && response.body.code === 901300) {
@@ -121,7 +139,9 @@ class APICardView extends React.Component {
                 }
             })
             .finally(() => {
-                this.setState({ loading: false });
+                if (this.mounted && requestId === this.apiLoadRequestId) {
+                    this.setState({ loading: false });
+                }
             });
     };
 
@@ -142,41 +162,108 @@ class APICardView extends React.Component {
     }
 
     changePage = (page) => {
+        const { intl } = this.props;
+        const requestId = this.apiLoadRequestId;
         this.page = page;
-        const start = page * this.rowsPerPage;
-        this.setState({
-            data: this.allData.slice(start, start + this.rowsPerPage),
-        });
+        this.setState({ loading: true });
+        this.loadPage(page, requestId)
+            .then((data) => {
+                if (this.mounted && requestId === this.apiLoadRequestId) {
+                    this.setState({ data });
+                }
+            })
+            .catch(() => {
+                if (!this.mounted || requestId !== this.apiLoadRequestId) {
+                    return;
+                }
+                Alert.error(intl.formatMessage({
+                    defaultMessage: 'Error While Loading APIs',
+                    id: 'Apis.Listing.ApiTableView.error.loading',
+                }));
+            })
+            .finally(() => {
+                if (this.mounted && requestId === this.apiLoadRequestId) {
+                    this.setState({ loading: false });
+                }
+            });
     };
 
     /**
-     * Load all published APIs before applying filters used by this dialog.
-     * @param {number} offset backend pagination offset
-     * @param {Array} accumulatedAPIs APIs collected from previous pages
-     * @returns {Promise<Array>} complete API list
+     * Reset APIs collected for the current search and subscription state.
      */
-    loadAllAPIs = (offset = 0, accumulatedAPIs = []) => {
+    resetAPICache = () => {
+        this.visibleAPIs = [];
+        this.apiOffset = 0;
+        this.apiTotal = null;
+        this.allAPIsLoaded = false;
+        this.count = 0;
+        this.apiLoadRequestId++;
+    };
+
+    /**
+     * Load enough backend pages to fill the requested visible page.
+     * @param {number} page requested UI page
+     * @param {number} requestId current load request id
+     * @returns {Promise<Array>} APIs for the requested page
+     */
+    loadPage = (page, requestId) => {
+        const requiredVisibleAPIs = ((page + 1) * this.rowsPerPage) + 1;
+
+        return this.loadUntil(requiredVisibleAPIs, requestId)
+            .then(() => {
+                const start = page * this.rowsPerPage;
+                return this.visibleAPIs.slice(start, start + this.rowsPerPage);
+            });
+    };
+
+    /**
+     * Continue loading backend pages until enough visible APIs are available.
+     * @param {number} requiredVisibleAPIs number of visible APIs required
+     * @param {number} requestId current load request id
+     * @returns {Promise<void>}
+     */
+    loadUntil = (requiredVisibleAPIs, requestId) => {
+        if (requestId !== this.apiLoadRequestId) {
+            return Promise.resolve();
+        }
+        if (this.visibleAPIs.length >= requiredVisibleAPIs || this.allAPIsLoaded) {
+            this.updateAPICount();
+            return Promise.resolve();
+        }
+
         const { searchText } = this.props;
         const api = new API();
         const query = searchText && searchText !== ''
             ? `${searchText} status:published` : 'status:published';
 
-        return api.getAllAPIs({ query, limit: API_PAGE_SIZE, offset })
+        return api.getAllAPIs({ query, limit: this.rowsPerPage, offset: this.apiOffset })
             .then((response) => {
-                const { body } = response;
-                const pagination = body.pagination || {};
-                const apiList = body.list || [];
-                const apis = accumulatedAPIs.concat(apiList);
-                const total = pagination.total || apis.length;
-                const limit = pagination.limit || API_PAGE_SIZE;
-                const currentOffset = pagination.offset || offset;
-                const nextOffset = currentOffset + limit;
-
-                if (apis.length < total && apiList.length > 0) {
-                    return this.loadAllAPIs(nextOffset, apis);
+                if (requestId !== this.apiLoadRequestId) {
+                    return null;
                 }
-                return apis;
+                const { body } = response;
+                const { list = [], pagination = {} } = body;
+                const limit = pagination.limit ?? this.rowsPerPage;
+                const offset = pagination.offset ?? this.apiOffset;
+
+                this.apiTotal = pagination.total ?? this.apiTotal ?? list.length;
+                this.apiOffset = offset + limit;
+                this.visibleAPIs = this.visibleAPIs.concat(this.updateUnsubscribedAPIsList(list));
+                this.allAPIsLoaded = list.length === 0 || this.apiOffset >= this.apiTotal;
+
+                if (this.visibleAPIs.length < requiredVisibleAPIs && !this.allAPIsLoaded) {
+                    return this.loadUntil(requiredVisibleAPIs, requestId);
+                }
+                this.updateAPICount();
+                return null;
             });
+    };
+
+    /**
+     * Use the visible APIs loaded so far as the paginator count.
+     */
+    updateAPICount = () => {
+        this.count = this.visibleAPIs.length;
     };
 
     /**
@@ -321,10 +408,10 @@ class APICardView extends React.Component {
                     this.page = 0;
                 }
                 this.rowsPerPage = numberOfRows;
-                const start = this.page * this.rowsPerPage;
-                this.setState({
-                    data: this.allData.slice(start, start + this.rowsPerPage),
-                });
+                this.page = 0;
+                this.resetAPICache();
+                this.setState({ loading: true });
+                this.getData();
             },
             textLabels: {
                 pagination: {
@@ -338,7 +425,7 @@ class APICardView extends React.Component {
         if (loading) {
             return <Loading />;
         }
-        if ((data && data.length === 0) || !data) {
+        if (count === 0 || !data) {
             return <NoApi />;
         }
         return (
