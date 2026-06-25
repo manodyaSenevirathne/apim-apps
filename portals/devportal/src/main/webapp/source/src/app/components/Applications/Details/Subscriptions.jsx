@@ -23,6 +23,7 @@ import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
+import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import PropTypes from 'prop-types';
 import Typography from '@mui/material/Typography';
@@ -49,6 +50,7 @@ import InlineMessage from 'AppComponents/Shared/InlineMessage';
 import SubscriptionTableData from './SubscriptionTableData';
 
 const PREFIX = 'Subscriptions';
+const SUBSCRIPTIONS_PER_PAGE = 10;
 
 const classes = {
     searchRoot: `${PREFIX}-searchRoot`,
@@ -68,6 +70,7 @@ const classes = {
     searchResults: `${PREFIX}-searchResults`,
     clearSearchIcon: `${PREFIX}-clearSearchIcon`,
     subsTable: `${PREFIX}-subsTable`,
+    pagination: `${PREFIX}-pagination`,
     closeButton: `${PREFIX}-closeButton`,
 };
 
@@ -127,6 +130,19 @@ const Root = styled('div')((
     [`& .${classes.subsTable}`]: {
         '& td': {
             padding: '4px 8px',
+        },
+    },
+
+    [`& .${classes.pagination}`]: {
+        display: 'flex',
+        justifyContent: 'flex-end',
+        borderTop: `1px solid ${theme.palette.divider}`,
+        '& .MuiTablePagination-toolbar': {
+            minHeight: 48,
+            paddingRight: 0,
+        },
+        '& .MuiTablePagination-displayedRows': {
+            margin: 0,
         },
     },
 
@@ -197,6 +213,23 @@ const StyledDialog = styled(Dialog)((
     },
 }));
 
+function parseResponseData(response) {
+    if (response && response.data) {
+        return typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+    }
+    if (response && response.body) {
+        return typeof response.body === 'string' ? JSON.parse(response.body) : response.body;
+    }
+    return null;
+}
+
+function isPseudoSubscription(subscription) {
+    const throttlingPolicies = subscription.apiInfo && subscription.apiInfo.throttlingPolicies;
+    return throttlingPolicies
+        && throttlingPolicies.length === 1
+        && throttlingPolicies[0].includes(CONSTANTS.DEFAULT_SUBSCRIPTIONLESS_PLAN);
+}
+
 /**
  *
  *
@@ -219,6 +252,9 @@ class Subscriptions extends React.Component {
             openDialog: false,
             searchText: '',
             pseudoSubscriptions: false,
+            subscriptionCount: 0,
+            subscriptionOffset: 0,
+            dialogSubscriptions: null,
         };
         this.checkSubValidationDisabled = this.checkSubValidationDisabled.bind(this);
         this.handleSubscriptionDelete = this.handleSubscriptionDelete.bind(this);
@@ -230,7 +266,18 @@ class Subscriptions extends React.Component {
         this.handleSearchTextTmpChange = this.handleSearchTextTmpChange.bind(this);
         this.handleClearSearch = this.handleClearSearch.bind(this);
         this.handleEnterPress = this.handleEnterPress.bind(this);
+        this.handleSubscriptionPageChange = this.handleSubscriptionPageChange.bind(this);
+        this.updateDialogSubscriptions = this.updateDialogSubscriptions.bind(this);
+        this.getAPIById = this.getAPIById.bind(this);
+        this.getSubscriptionPolicyByName = this.getSubscriptionPolicyByName.bind(this);
+        this.resetPageDataCache = this.resetPageDataCache.bind(this);
+        this.loadAllSubscriptions = this.loadAllSubscriptions.bind(this);
+        this.apiDetailsById = {};
+        this.subscriptionPoliciesByName = {};
         this.searchTextTmp = '';
+        this.mounted = false;
+        this.subscriptionsRequestId = 0;
+        this.dialogLoadRequestId = 0;
     }
 
     /**
@@ -239,51 +286,153 @@ class Subscriptions extends React.Component {
      * @memberof Subscriptions
      */
     componentDidMount() {
+        this.mounted = true;
         const { applicationId } = this.props.application;
         this.updateSubscriptions(applicationId);
     }
 
+    componentWillUnmount() {
+        this.mounted = false;
+        this.subscriptionsRequestId += 1;
+        this.dialogLoadRequestId += 1;
+        this.resetPageDataCache();
+    }
+
     handleOpenDialog() {
-        this.setState((prevState) => ({ openDialog: !prevState.openDialog, searchText: '' }));
+        const { applicationId } = this.props.application;
+        this.searchTextTmp = '';
+        this.dialogLoadRequestId += 1;
+        this.setState((prevState) => ({
+            openDialog: !prevState.openDialog,
+            searchText: '',
+            dialogSubscriptions: null,
+        }), () => {
+            if (this.state.openDialog) {
+                this.updateDialogSubscriptions(applicationId);
+            }
+        });
+    }
+
+    resetPageDataCache() {
+        this.apiDetailsById = {};
+        this.subscriptionPoliciesByName = {};
+    }
+
+    getAPIById(apiUUID) {
+        if (!this.apiDetailsById[apiUUID]) {
+            const apiClient = new Api();
+            this.apiDetailsById[apiUUID] = apiClient.getAPIById(apiUUID).then(parseResponseData);
+        }
+        return this.apiDetailsById[apiUUID];
+    }
+
+    getSubscriptionPolicyByName(policyName) {
+        if (!this.subscriptionPoliciesByName[policyName]) {
+            const apiClient = new Api();
+            this.subscriptionPoliciesByName[policyName] = apiClient
+                .getTierByName(policyName, 'subscription')
+                .then(parseResponseData);
+        }
+        return this.subscriptionPoliciesByName[policyName];
     }
 
     /**
      *
      * Check if the subscription validation is disabled
      * @param {*} subList Subscriptions list reponse object
-     * @returns
+     * @param {*} total subscription count
+     * @param {*} applicationId application id
+     * @param {*} requestId current subscriptions request id
      */
-    checkSubValidationDisabled(subList) {
-        if (subList !== null && subList.length > 0) {
-            const pseudoList = subList.filter((sub) => (sub.apiInfo.throttlingPolicies
-                && sub.apiInfo.throttlingPolicies.length === 1
-                && sub.apiInfo.throttlingPolicies[0].includes(CONSTANTS.DEFAULT_SUBSCRIPTIONLESS_PLAN)));
-            if (pseudoList.length === subList.length) {
-                this.setState({ pseudoSubscriptions: true });
-            } else {
-                this.setState({ pseudoSubscriptions: false });
-            }
+    checkSubValidationDisabled(subList, total, applicationId, requestId) {
+        if (!this.mounted || requestId !== this.subscriptionsRequestId) {
             return;
         }
-        this.setState({ pseudoSubscriptions: false });
+        if (!subList || subList.length === 0 || !subList.every(isPseudoSubscription)) {
+            this.setState({ pseudoSubscriptions: false });
+            return;
+        }
+
+        if (total === subList.length) {
+            this.setState({ pseudoSubscriptions: true });
+            return;
+        }
+
+        this.loadAllSubscriptions(applicationId)
+            .then((subscriptions) => {
+                if (this.mounted && requestId === this.subscriptionsRequestId) {
+                    this.setState({
+                        pseudoSubscriptions: subscriptions.length === total
+                            && subscriptions.every(isPseudoSubscription),
+                    });
+                }
+            })
+            .catch(() => {
+                if (this.mounted && requestId === this.subscriptionsRequestId) {
+                    this.setState({ pseudoSubscriptions: false });
+                }
+            });
+    }
+
+    /**
+     * Load every subscription for flows that require the complete list.
+     * @param {*} applicationId application id
+     * @param {*} offset subscription list offset
+     * @param {*} accumulatedSubscriptions subscriptions collected from previous pages
+     * @returns {Promise<Array>}
+     */
+    loadAllSubscriptions(applicationId, offset = 0, accumulatedSubscriptions = []) {
+        const client = new Subscription();
+        const subscriptionLimit = app.subscriptionLimit || 1000;
+        return client.getSubscriptions(null, applicationId, subscriptionLimit, offset)
+            .then((response) => {
+                const { body } = response;
+                const pagination = body.pagination || {};
+                const subscriptionList = body.list || [];
+                const subscriptions = accumulatedSubscriptions.concat(subscriptionList);
+                const total = pagination.total || subscriptions.length;
+                const limit = pagination.limit || subscriptionLimit;
+                const currentOffset = pagination.offset || offset;
+                const nextOffset = currentOffset + limit;
+
+                if (subscriptions.length < total && subscriptionList.length > 0) {
+                    return this.loadAllSubscriptions(applicationId, nextOffset, subscriptions);
+                }
+                return subscriptions;
+            });
     }
 
     /**
      *
      * Update subscriptions list of Application
      * @param {*} applicationId application id
+     * @param {*} offset subscription list offset
      * @memberof Subscriptions
      */
-    updateSubscriptions(applicationId) {
+    updateSubscriptions(applicationId, offset = 0) {
+        const requestId = ++this.subscriptionsRequestId;
         const client = new Subscription();
-        const subscriptionLimit = app.subscriptionLimit || 1000;
-        const promisedSubscriptions = client.getSubscriptions(null, applicationId, subscriptionLimit);
+        const promisedSubscriptions = client.getSubscriptions(null, applicationId, SUBSCRIPTIONS_PER_PAGE, offset);
         promisedSubscriptions
             .then((response) => {
-                this.setState({ subscriptions: response.body.list });
-                this.checkSubValidationDisabled(response.body.list);
+                if (!this.mounted || requestId !== this.subscriptionsRequestId) {
+                    return;
+                }
+                const { body } = response;
+                const pagination = body.pagination || {};
+                const subscriptionCount = pagination.total || body.count || 0;
+                this.resetPageDataCache();
+                this.setState({
+                    subscriptions: body.list,
+                    subscriptionCount,
+                    subscriptionOffset: pagination.offset || offset,
+                });
+                this.checkSubValidationDisabled(body.list, subscriptionCount, applicationId, requestId);
             })
             .catch((error) => {
+                if (!this.mounted || requestId !== this.subscriptionsRequestId) {
+                    return;
+                }
                 const { status } = error;
                 if (status === 404) {
                     this.setState({ subscriptionsNotFound: true });
@@ -291,6 +440,42 @@ class Subscriptions extends React.Component {
                     this.setState({ isAuthorize: false });
                 }
             });
+    }
+
+    /**
+     *
+     * Update full subscriptions list used by the Subscribe APIs dialog.
+     * @param {*} applicationId application id
+     * @returns {Promise<void>}
+     * @memberof Subscriptions
+     */
+    updateDialogSubscriptions(applicationId) {
+        const requestId = ++this.dialogLoadRequestId;
+        return this.loadAllSubscriptions(applicationId)
+            .then((dialogSubscriptions) => {
+                if (this.mounted
+                    && requestId === this.dialogLoadRequestId
+                    && this.state.openDialog
+                    && this.props.application.applicationId === applicationId) {
+                    this.setState({ dialogSubscriptions });
+                }
+                return null;
+            })
+            .catch((error) => {
+                if (this.mounted && requestId === this.dialogLoadRequestId) {
+                    const { status } = error;
+                    if (status === 401) {
+                        this.setState({ isAuthorize: false });
+                    } else {
+                        this.setState({ dialogSubscriptions: [] });
+                    }
+                }
+            });
+    }
+
+    handleSubscriptionPageChange(event, page) {
+        const { applicationId } = this.props.application;
+        this.updateSubscriptions(applicationId, page * SUBSCRIPTIONS_PER_PAGE);
     }
 
     /**
@@ -306,6 +491,9 @@ class Subscriptions extends React.Component {
 
         promisedDelete
             .then((response) => {
+                if (!this.mounted) {
+                    return;
+                }
                 if (response.status === 200) {
                     Alert.info(intl.formatMessage({
                         defaultMessage: 'Subscription deleted successfully!',
@@ -319,7 +507,8 @@ class Subscriptions extends React.Component {
                         id: 'Applications.Details.Subscriptions.request.created',
                     }));
                     const { applicationId } = this.props.application;
-                    this.updateSubscriptions(applicationId);
+                    const { subscriptionOffset } = this.state;
+                    this.updateSubscriptions(applicationId, subscriptionOffset);
                     return;
                 }
                 if (response.status !== 200 && response.status !== 201) {
@@ -330,21 +519,18 @@ class Subscriptions extends React.Component {
                     }));
                     return;
                 }
-                const { subscriptions } = this.state;
-                for (const endpointIndex in subscriptions) {
-                    if (
-                        Object.prototype.hasOwnProperty.call(subscriptions, endpointIndex)
-                        && subscriptions[endpointIndex].subscriptionId === subscriptionId
-                    ) {
-                        subscriptions.splice(endpointIndex, 1);
-                        break;
-                    }
-                }
-                this.setState({ subscriptions });
-                this.checkSubValidationDisabled(subscriptions);
+                const { subscriptions, subscriptionOffset } = this.state;
+                const nextOffset = subscriptions.length === 1 && subscriptionOffset > 0
+                    ? subscriptionOffset - SUBSCRIPTIONS_PER_PAGE
+                    : subscriptionOffset;
+                const { applicationId } = this.props.application;
+                this.updateSubscriptions(applicationId, nextOffset);
                 this.props.getApplication();
             })
             .catch((error) => {
+                if (!this.mounted) {
+                    return;
+                }
                 const { status } = error;
                 if (status === 401) {
                     this.setState({ isAuthorize: false });
@@ -381,6 +567,9 @@ class Subscriptions extends React.Component {
 
         promisedUpdate
             .then((response) => {
+                if (!this.mounted) {
+                    return;
+                }
                 if (response.status !== 200 && response.status !== 201) {
                     console.log(response);
                     Alert.info(intl.formatMessage({
@@ -401,10 +590,14 @@ class Subscriptions extends React.Component {
                         id: 'Applications.Details.Subscriptions.business.plan.updated',
                     }));
                 }
-                this.updateSubscriptions(applicationId);
+                const { subscriptionOffset } = this.state;
+                this.updateSubscriptions(applicationId, subscriptionOffset);
                 this.props.getApplication();
             })
             .catch((error) => {
+                if (!this.mounted) {
+                    return;
+                }
                 const { status: statusInner } = error;
                 if (statusInner === 401) {
                     this.setState({ isAuthorize: false });
@@ -437,6 +630,9 @@ class Subscriptions extends React.Component {
         const promisedSubscribe = api.subscribe(apiId, applicationId, policy);
         promisedSubscribe
             .then((response) => {
+                if (!this.mounted) {
+                    return;
+                }
                 if (response.status !== 201) {
                     Alert.error(intl.formatMessage({
                         id: 'Applications.Details.Subscriptions.error.occurred.during.subscription.not.201',
@@ -461,11 +657,18 @@ class Subscriptions extends React.Component {
                             defaultMessage: 'Subscription successful',
                         }));
                     }
-                    this.updateSubscriptions(applicationId);
+                    const { subscriptionOffset } = this.state;
+                    this.updateSubscriptions(applicationId, subscriptionOffset);
+                    if (this.state.openDialog) {
+                        this.updateDialogSubscriptions(applicationId);
+                    }
                     this.props.getApplication();
                 }
             })
             .catch((error) => {
+                if (!this.mounted) {
+                    return;
+                }
                 const { status } = error;
                 if (status === 401) {
                     this.setState({ isAuthorize: false });
@@ -490,6 +693,7 @@ class Subscriptions extends React.Component {
     }
 
     handleClearSearch() {
+        this.searchTextTmp = '';
         this.setState({ searchText: '' });
         this.searchInputElem.value = '';
     }
@@ -506,14 +710,16 @@ class Subscriptions extends React.Component {
      * @memberof Subscriptions
      */
     render() {
-        const { isAuthorize, openDialog, searchText } = this.state;
+        const {
+            isAuthorize, openDialog, searchText, dialogSubscriptions,
+        } = this.state;
 
         if (!isAuthorize) {
             window.location = app.context + '/services/configs';
         }
 
         const {
-            subscriptions, apisNotFound, subscriptionsNotFound,
+            subscriptions, apisNotFound, subscriptionsNotFound, subscriptionCount, subscriptionOffset,
         } = this.state;
         const { applicationId } = this.props.application;
         const { intl } = this.props;
@@ -579,61 +785,76 @@ class Subscriptions extends React.Component {
                                             {subscriptionsNotFound ? (
                                                 <ResourceNotFound />
                                             ) : (
-                                                <Table className={classes.subsTable}>
-                                                    <TableHead>
-                                                        <TableRow>
-                                                            <TableCell className={classes.firstCell}>
-                                                                <FormattedMessage
-                                                                    id='Applications.Details.Subscriptions.api.name'
-                                                                    defaultMessage='API'
-                                                                />
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <FormattedMessage
-                                                                    id={`Applications.Details.Subscriptions
+                                                <>
+                                                    <Table className={classes.subsTable}>
+                                                        <TableHead>
+                                                            <TableRow>
+                                                                <TableCell className={classes.firstCell}>
+                                                                    <FormattedMessage
+                                                                        id='Applications.Details.Subscriptions.api.name'
+                                                                        defaultMessage='API'
+                                                                    />
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <FormattedMessage
+                                                                        id={`Applications.Details.Subscriptions
                                                                             .subscription.state`}
-                                                                    defaultMessage='Lifecycle State'
-                                                                />
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <FormattedMessage
-                                                                    id={`Applications.Details.Subscriptions
+                                                                        defaultMessage='Lifecycle State'
+                                                                    />
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <FormattedMessage
+                                                                        id={`Applications.Details.Subscriptions
                                                                             .business.plan`}
-                                                                    defaultMessage='Business Plan'
-                                                                />
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <FormattedMessage
-                                                                    id='Applications.Details.Subscriptions.Status'
-                                                                    defaultMessage='Subscription Status'
-                                                                />
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <FormattedMessage
-                                                                    id='Applications.Details.Subscriptions.action'
-                                                                    defaultMessage='Action'
-                                                                />
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    </TableHead>
-                                                    <TableBody>
-                                                        {subscriptions
-                                                                    && subscriptions.map((subscription) => {
-                                                                        return (
-                                                                            <SubscriptionTableData
-                                                                                key={subscription.subscriptionId}
-                                                                                subscription={subscription}
-                                                                                handleSubscriptionDelete={
-                                                                                    this.handleSubscriptionDelete
-                                                                                }
-                                                                                handleSubscriptionUpdate={
-                                                                                    this.handleSubscriptionUpdate
-                                                                                }
-                                                                            />
-                                                                        );
-                                                                    })}
-                                                    </TableBody>
-                                                </Table>
+                                                                        defaultMessage='Business Plan'
+                                                                    />
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <FormattedMessage
+                                                                        id='Applications.Details.Subscriptions.Status'
+                                                                        defaultMessage='Subscription Status'
+                                                                    />
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <FormattedMessage
+                                                                        id='Applications.Details.Subscriptions.action'
+                                                                        defaultMessage='Action'
+                                                                    />
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        </TableHead>
+                                                        <TableBody>
+                                                            {subscriptions
+                                                                        && subscriptions.map((subscription) => {
+                                                                            return (
+                                                                                <SubscriptionTableData
+                                                                                    key={subscription.subscriptionId}
+                                                                                    subscription={subscription}
+                                                                                    handleSubscriptionDelete={
+                                                                                        this.handleSubscriptionDelete
+                                                                                    }
+                                                                                    handleSubscriptionUpdate={
+                                                                                        this.handleSubscriptionUpdate
+                                                                                    }
+                                                                                    getAPIById={this.getAPIById}
+                                                                                    getSubscriptionPolicyByName={
+                                                                                        this.getSubscriptionPolicyByName
+                                                                                    }
+                                                                                />
+                                                                            );
+                                                                        })}
+                                                        </TableBody>
+                                                    </Table>
+                                                    <TablePagination
+                                                        className={classes.pagination}
+                                                        component='div'
+                                                        count={subscriptionCount}
+                                                        page={Math.floor(subscriptionOffset / SUBSCRIPTIONS_PER_PAGE)}
+                                                        rowsPerPage={SUBSCRIPTIONS_PER_PAGE}
+                                                        rowsPerPageOptions={[]}
+                                                        onPageChange={this.handleSubscriptionPageChange}
+                                                    />
+                                                </>
                                             )}
                                         </Box>
                                     )}
@@ -723,13 +944,21 @@ class Subscriptions extends React.Component {
                                 </IconButton>
                             </Box>
                             <Box padding={2}>
-                                <APIList
-                                    apisNotFound={apisNotFound}
-                                    subscriptions={subscriptions}
-                                    applicationId={applicationId}
-                                    handleSubscribe={(appInner, api, policy) => this.handleSubscribe(appInner, api, policy)}
-                                    searchText={searchText}
-                                />
+                                {dialogSubscriptions ? (
+                                    <APIList
+                                        apisNotFound={apisNotFound}
+                                        subscriptions={dialogSubscriptions}
+                                        applicationId={applicationId}
+                                        handleSubscribe={
+                                            (appInner, apiInner, policy) => this.handleSubscribe(
+                                                appInner, apiInner, policy,
+                                            )
+                                        }
+                                        searchText={searchText}
+                                    />
+                                ) : (
+                                    <Progress />
+                                )}
                             </Box>
                         </StyledDialog>
                     </Box>
