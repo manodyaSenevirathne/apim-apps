@@ -21,20 +21,21 @@ describe("Mock the api response and test it", () => {
         return false;
     });
     const { publisher, password, } = Utils.getUserInfo();
-    const productName = Utils.generateName();
     const productVersion = '1.0.0';
-    const apiName = Utils.generateName();
+    // Per-attempt unique names with stable apipstest/prodpstest prefixes so
+    // purgePetstoreArtifacts can find leftovers and free the petstore scopes.
+    let productName;
+    let apiName;
     let testApiID;
     beforeEach(function () {
+        apiName = `apipstest${Utils.generateRandomNumber()}`;
+        productName = `prodpstest${Utils.generateRandomNumber()}`;
         cy.loginToPublisher(publisher, password);
+        // Free the petstore scopes before import; beforeEach so it re-runs per retry.
+        Utils.purgePetstoreArtifacts();
     })
 
-    it("Mock the api response and test it", {
-        retries: {
-            runMode: 3,
-            openMode: 0,
-        },
-    }, () => {
+    it("Mock the api response and test it", () => {
         cy.visit(`/publisher/apis/create/openapi`, { timeout: Cypress.config().largeTimeout }).wait(5000)
         cy.get('#open-api-file-select-radio').click()
         cy.wait(5000);
@@ -87,7 +88,7 @@ describe("Mock the api response and test it", () => {
                     cy.get('#resource-wrapper').children().should('have.length.gte', 1);
 
                     // add all resources
-                    cy.get('#add-all-resources-btn').click({ force: true });
+                    cy.get('#add-all-resources-btn').click();
 
                     cy.get('#create-api-product-btn').scrollIntoView().click({ force: true });
                     cy.wait(5000);
@@ -121,13 +122,29 @@ describe("Mock the api response and test it", () => {
                         // Go to api product
                         cy.visit(`/publisher/api-products/${productID}/resources/edit`).wait(2000);
 
-                        // Add the newly created resource and save
+                        // Add the newly created resource and save. The product
+                        // resources/edit page fetches the underlying API's resources
+                        // once on load; on 4.5.0 that can race eventhub propagation of
+                        // the just-added /test op, rendering an empty list. Reload until
+                        // the resource list is populated, then pick the last resource.
                         cy.get('#resource-wrapper', { timeout: Cypress.config().largeTimeout }).wait(2000);
-
-                        cy.get('ul#resource-wrapper').find('li')
-                            .last()
-                            .scrollIntoView().wait(3000)
-                            .click();
+                        const selectLastResource = (triesLeft = 3) => {
+                            cy.get('body').then(($b) => {
+                                if ($b.find('ul#resource-wrapper li').length) {
+                                    cy.get('ul#resource-wrapper').find('li')
+                                        .last()
+                                        .scrollIntoView().wait(3000)
+                                        .click();
+                                } else if (triesLeft > 0) {
+                                    cy.reload().wait(3000);
+                                    cy.get('#resource-wrapper', { timeout: Cypress.config().largeTimeout }).wait(2000);
+                                    selectLastResource(triesLeft - 1);
+                                } else {
+                                    throw new Error('product resources/edit: #resource-wrapper never populated with the underlying API resources');
+                                }
+                            });
+                        };
+                        selectLastResource(3);
 
                         cy.get('#add-selected-resources').click();
                         cy.get('#save-product-resources').click();
@@ -144,6 +161,6 @@ describe("Mock the api response and test it", () => {
         });
     });
     afterEach(() => {
-        Utils.deleteAPI(testApiID);
+        Utils.cleanupProductAndApi(productName, apiName);
     })
 })

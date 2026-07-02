@@ -23,7 +23,11 @@ describe("Set publisher access control and visibility by roles", () => {
     const apiName = Utils.generateName();
     const apiVersion = '1.0.0';
 
-    before(function () {
+    // beforeEach (not before): a login flake here is then retryable —
+    // Cypress does not retry `before all` hook failures.
+    beforeEach(function () {
+        cy.clearCookies();
+        cy.clearLocalStorage();
         cy.loginToPublisher(publisher, password);
     })
 

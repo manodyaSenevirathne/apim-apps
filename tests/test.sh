@@ -6,6 +6,7 @@ set -o xtrace
 HOME=`pwd`
 TEST_SCRIPT=test.sh
 MVNSTATE=1
+TEST_SPECS=""
 
 function usage()
 {
@@ -33,6 +34,10 @@ while getopts "$optspec" optchar; do
                 mvn-opts)
                     val="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     MAVEN_OPTS=$val
+                    ;;
+                test-specs)
+                    val="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    TEST_SPECS=$val
                     ;;
                 *)
                     usage
@@ -134,12 +139,97 @@ npm run delete:reportFolderHTML
 npm run delete:reportFolderJUnit
 npm run delete:reportFolderReport
 npm run pre-test
+# Drop any stale failed-specs list from a prior build on a reused CI agent.
+rm -f cypress/failed-specs.txt
 nohup Xvfb :99 > /dev/null 2>&1 &
 export DISPLAY=:99
-NO_COLOR=1 npm run test
-MVNSTATE=$?
-pkill Xvfb
+# Cypress 9 has no --e2e flag; --spec alone scopes the run.
+if [ -n "$TEST_SPECS" ]; then
+    echo "===== test_specs set — running user-selected specs only ====="
+    echo "$TEST_SPECS" | tr ',' '\n'
+    NO_COLOR=1 npx cypress run --spec "$TEST_SPECS"
+else
+    NO_COLOR=1 npm run test
+fi
+MVNSTATE_FIRST=$?
+pkill Xvfb || true
+
+# after:run (cypress/plugins/index.js) wrote failing specs to failed-specs.txt.
+FAILED_SPECS=$(node ./scripts/extract-failed-specs.js)
+FLAKY_SPECS=""
+MVNSTATE=$MVNSTATE_FIRST
+
+if [ -n "$FAILED_SPECS" ]; then
+    echo "===== First pass failures detected ====="
+    echo "$FAILED_SPECS" | tr ',' '\n'
+    echo "===== Starting rerun pass ====="
+    nohup Xvfb :99 > /dev/null 2>&1 &
+    export DISPLAY=:99
+    NO_COLOR=1 npx cypress run --spec "$FAILED_SPECS"
+    MVNSTATE_SECOND=$?
+    pkill Xvfb || true
+    FLAKY_SPECS="$FAILED_SPECS"
+    MVNSTATE=$MVNSTATE_SECOND
+fi
+
+# Write ONLY the spec paths (one per line) so the build-overview banner is clean.
+if [ -n "$FLAKY_SPECS" ] && [ -n "${OUTPUT_DIR}" ]; then
+    echo "$FLAKY_SPECS" | tr ',' '\n' > "${OUTPUT_DIR}/flaky-specs.txt"
+    echo "===== Flaky-specs marker written to ${OUTPUT_DIR}/flaky-specs.txt (verdict exit ${MVNSTATE}) ====="
+fi
+
+# Build and email the mochawesome report (this suite emails its own report).
 npm run report:merge
 npm run report:generate
 node ./upload_email
+
+# On failure, fetch remote server logs via S3 (no SSH access to the target host).
+fetch_remote_carbon_logs() {
+    local s3_out instance_id trigger_path result_path tmpdir
+    s3_out=$(get_prop 'S3OutputBucketLocation')
+    instance_id=$(get_prop 'WSO2InstanceId')
+    if [ -z "$s3_out" ] || [ -z "$instance_id" ]; then
+        echo "[carbon-logs] S3OutputBucketLocation or WSO2InstanceId missing — skipping"
+        return 0
+    fi
+    trigger_path="s3://${s3_out}/dump-now"
+    result_path="s3://${s3_out}/carbon-logs/${instance_id}-carbon-logs.tar.gz"
+    set +o xtrace
+    echo ""
+    echo "===== Begin remote carbon log dump ====="
+    aws s3 rm "${result_path}" --quiet >/dev/null 2>&1
+    if ! echo "$(date -u +%FT%TZ)" | aws s3 cp - "${trigger_path}" --quiet; then
+        echo "[carbon-logs] failed to write trigger flag — skipping"; echo "===== End remote carbon log dump ====="; set -o xtrace; return 0
+    fi
+    local found=false i
+    for i in $(seq 1 18); do
+        sleep 5
+        if aws s3 ls "${result_path}" >/dev/null 2>&1; then found=true; break; fi
+    done
+    if [ "$found" != "true" ]; then
+        echo "[carbon-logs] tarball did not appear in 90s — watcher may not be running."; echo "===== End remote carbon log dump ====="; set -o xtrace; return 0
+    fi
+    tmpdir=$(mktemp -d)
+    aws s3 cp "${result_path}" "${tmpdir}/carbon-logs.tar.gz" --quiet && tar -xzf "${tmpdir}/carbon-logs.tar.gz" -C "${tmpdir}"
+    if [ -e "${tmpdir}/logs/wso2carbon.log" ]; then
+        echo ""; echo "----- wso2carbon.log (Solr-noise filtered, tail 20000) -----"
+        grep -v -E 'newapi.*Lexical error|registry\.indexing\.solr|SolrQueryParserBase|QueryParserTokenManager|org\.apache\.solr\.parser|org\.apache\.solr\.search\.LuceneQParser|org\.apache\.solr\.search\.QParser|org\.apache\.solr\.handler\.RequestHandlerBase' \
+            "${tmpdir}/logs/wso2carbon.log" | tail -n 20000
+    fi
+    rm -rf "${tmpdir}"
+    aws s3 rm "${result_path}" --quiet >/dev/null 2>&1
+    echo "===== End remote carbon log dump ====="
+    set -o xtrace
+}
+if [ "${MVNSTATE}" -ne 0 ]; then
+    fetch_remote_carbon_logs || true
+fi
+
+# Ship Cypress screenshots + mochawesome HTML to S3 via ${OUTPUT_DIR}.
+if [ -n "${OUTPUT_DIR}" ]; then
+    [ -d "${HOME}/cypress/screenshots" ] && cp -r "${HOME}/cypress/screenshots" "${OUTPUT_DIR}/cypress-screenshots" 2>/dev/null || true
+    [ -d "${HOME}/cypress/reports/html" ] && cp -r "${HOME}/cypress/reports/html" "${OUTPUT_DIR}/cypress-report" 2>/dev/null || true
+fi
 ######
+
+exit $MVNSTATE

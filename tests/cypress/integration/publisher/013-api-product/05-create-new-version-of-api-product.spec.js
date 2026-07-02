@@ -23,22 +23,24 @@ describe("Create new API product version", () => {
         return false;
     });
     const { publisher, password, } = Utils.getUserInfo();
-    const apiName = Utils.generateName();
-    const productName = Utils.generateName();
     const productVersion = '1.0.0';
     const newVersion = '2.0.0';
+    // Per-attempt unique names so a leaked API/Product doesn't poison every retry.
+    let apiName;
+    let productName;
     let testApiID;
 
     beforeEach(function () {
+        // Stable apipstest/prodpstest prefixes so purgePetstoreArtifacts can
+        // find leftovers regardless of the random suffix.
+        apiName = `apipstest${Utils.generateRandomNumber()}`;
+        productName = `prodpstest${Utils.generateRandomNumber()}`;
         cy.loginToPublisher(publisher, password);
+        // Free the petstore scopes before import; beforeEach so it re-runs per retry.
+        Utils.purgePetstoreArtifacts();
     })
 
-    it("Create new API product version", {
-        retries: {
-            runMode: 1,
-            openMode: 0,
-        },
-    }, () => {
+    it("Create new API product version", () => {
         // create a new api
         cy.visit(`/publisher/apis/create/openapi`, { timeout: Cypress.config().largeTimeout }).wait(5000);
         cy.get('#open-api-file-select-radio').click();
@@ -59,8 +61,21 @@ describe("Create new API product version", () => {
             cy.get('#itest-id-apicontext-input').type(apiName);
             cy.get('#itest-id-apiversion-input').click();
             const version = doc.querySelector('#itest-id-apiversion-input').value;
-            cy.get('#open-api-create-btn').should('not.have.class', 'Mui-disabled').click({ force: true });
-            cy.wait(5000);
+            // Assert on the network response so a server error fails fast
+            // instead of timing out on URL polling.
+            cy.get('#itest-id-apiname-input').should('have.value', apiName);
+            cy.get('#itest-id-apicontext-input').should('have.value', apiName);
+            cy.intercept('POST', '**/apis/import-openapi').as('importOpenApi');
+            cy.get('#open-api-create-btn').should('not.have.class', 'Mui-disabled').should('be.enabled').click();
+            cy.wait('@importOpenApi', { timeout: Cypress.config().largeTimeout }).then((interception) => {
+                const sc = interception && interception.response && interception.response.statusCode;
+                if (sc !== 201) {
+                    // The 400 has no server-side ERROR log; the response body is
+                    // the only place the real reason appears.
+                    cy.task('log', `[import-openapi] status=${sc} body=${JSON.stringify(interception && interception.response && interception.response.body)}`);
+                }
+                expect(sc, 'import-openapi response status').to.eq(201);
+            });
 
             cy.url().should('contains', 'overview').then(url => {
                 testApiID = /apis\/(.*?)\/overview/.exec(url)[1];
@@ -131,7 +146,6 @@ describe("Create new API product version", () => {
         });
     });
     afterEach(() => {
-        Utils.deleteAPI(testApiID);
-        cy.wait(5000);
+        Utils.cleanupProductAndApi(productName, apiName);
     })
 })
