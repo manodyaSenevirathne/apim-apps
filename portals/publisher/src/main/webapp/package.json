@@ -99,7 +99,7 @@
         "rich-textarea": "^0.26.4",
         "sourcemapped-stacktrace": "^1.1.11",
         "swagger-client": "3.36.2",
-        "swagger-ui-react": "5.32.1",
+        "swagger-ui-react": "5.32.7",
         "url": "^0.11.3",
         "url-loader": "^4.1.1",
         "xml-beautifier": "^0.5.0"
