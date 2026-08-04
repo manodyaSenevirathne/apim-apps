@@ -2740,13 +2740,14 @@ class API extends Resource {
      * @returns {Promise}
      *
      */
-    static policies(policyLevel, limit, isAiApi, organizationId ) {
+    static policies(policyLevel, limit, isAiApi, organizationId, offset ) {
         const apiClient = new APIClientFactory().getAPIClient(Utils.getCurrentEnvironment(), Utils.CONST.API_CLIENT).client;
         return apiClient.then(client => {
             return client.apis['Throttling Policies'].getAllThrottlingPolicies(
                 {
                     policyLevel: policyLevel,
                     limit,
+                    offset,
                     isAiApi,
                     organizationId,
                 },
@@ -2755,11 +2756,14 @@ class API extends Resource {
         });
     }
 
-    static asyncAPIPolicies() {
+    static asyncAPIPolicies(limit, offset) {
         const apiClient = new APIClientFactory().getAPIClient(Utils.getCurrentEnvironment(), Utils.CONST.API_CLIENT).client;
         return apiClient.then(client => {
             return client.apis['Throttling Policies'].getSubscriptionThrottlingPolicies(
-                null,
+                {
+                    limit,
+                    offset,
+                },
                 this._requestMetaData(),
             );
         });
