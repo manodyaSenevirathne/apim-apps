@@ -21,6 +21,7 @@ import PropTypes from 'prop-types';
 import MUIDataTable from 'mui-datatables';
 import { injectIntl } from 'react-intl';
 import API from 'AppData/api';
+import Subscription from 'AppData/Subscription';
 import CONSTANTS from 'AppData/Constants';
 import NoApi from 'AppComponents/Apis/Listing/NoApi';
 import Loading from 'AppComponents/Base/Loading/Loading';
@@ -96,8 +97,8 @@ class APICardView extends React.Component {
      * @param {JSON} prevProps props from previous component instance
      */
     componentDidUpdate(prevProps) {
-        const { subscriptions, searchText } = this.props;
-        if (subscriptions.length !== prevProps.subscriptions.length) {
+        const { refreshKey, searchText } = this.props;
+        if (refreshKey !== prevProps.refreshKey) {
             this.resetAPICache();
             this.setState({ loading: true });
             this.getData();
@@ -146,20 +147,31 @@ class APICardView extends React.Component {
     };
 
     /**
+    * Resolve which APIs in the given page are already subscribed by this application.
+    * Queries the subscriptions endpoint with both apiId and applicationId so the backend
+    * returns only the matching subscription per API.
     *
-    * Get List of the Ids of all APIs that have been already subscribed
-    *
-    * @returns {*} Ids of respective APIs
+    * @param {Array} list a page of APIs
+    * @returns {Promise<Set<string>>} ids of the APIs in this page that are already subscribed
     * @memberof APICardView
     */
-    getIdsOfSubscribedEntities() {
-        const { subscriptions } = this.props;
-
-        // Get arrays of the API Ids and remove all null/empty references by executing 'fliter(Boolean)'
-        const subscribedAPIIds = subscriptions.map((sub) => sub.apiId).filter(Boolean);
-
-        return subscribedAPIIds;
-    }
+    resolveSubscribedIds = (list) => {
+        const { applicationId } = this.props;
+        const subscribedIds = new Set();
+        if (!applicationId || !list || list.length === 0) {
+            return Promise.resolve(subscribedIds);
+        }
+        const client = new Subscription();
+        return Promise.all(list.map((api) => client.getSubscriptions(api.id, applicationId, 1, 0)
+            .then((response) => {
+                const subList = (response && response.body && response.body.list) || [];
+                if (subList.length > 0) {
+                    subscribedIds.add(api.id);
+                }
+            })
+            .catch(() => {})))
+            .then(() => subscribedIds);
+    };
 
     changePage = (page) => {
         const { intl } = this.props;
@@ -248,14 +260,21 @@ class APICardView extends React.Component {
 
                 this.apiTotal = pagination.total ?? this.apiTotal ?? list.length;
                 this.apiOffset = offset + limit;
-                this.visibleAPIs = this.visibleAPIs.concat(this.updateUnsubscribedAPIsList(list));
-                this.allAPIsLoaded = list.length === 0 || this.apiOffset >= this.apiTotal;
 
-                if (this.visibleAPIs.length < requiredVisibleAPIs && !this.allAPIsLoaded) {
-                    return this.loadUntil(requiredVisibleAPIs, requestId);
-                }
-                this.updateAPICount();
-                return null;
+                return this.resolveSubscribedIds(list).then((subscribedIds) => {
+                    if (requestId !== this.apiLoadRequestId) {
+                        return null;
+                    }
+                    this.visibleAPIs = this.visibleAPIs
+                        .concat(this.updateUnsubscribedAPIsList(list, subscribedIds));
+                    this.allAPIsLoaded = list.length === 0 || this.apiOffset >= this.apiTotal;
+
+                    if (this.visibleAPIs.length < requiredVisibleAPIs && !this.allAPIsLoaded) {
+                        return this.loadUntil(requiredVisibleAPIs, requestId);
+                    }
+                    this.updateAPICount();
+                    return null;
+                });
             });
     };
 
@@ -269,18 +288,18 @@ class APICardView extends React.Component {
     /**
     * Update list of unsubscribed APIs
     * @param {Array} list array of apis
+    * @param {Set<string>} subscribedIds ids of APIs in this page that are already subscribed
     * @returns {Array} filtered list of apis
     * @memberof APICardView
     */
-    updateUnsubscribedAPIsList(list) {
-        const subscribedIds = this.getIdsOfSubscribedEntities();
+    updateUnsubscribedAPIsList(list, subscribedIds) {
         const listLocal = list.filter((api) => !(api.throttlingPolicies.length === 1
              && api.throttlingPolicies[0].includes(CONSTANTS.DEFAULT_SUBSCRIPTIONLESS_PLAN)));
         for (let i = 0; i < listLocal.length; i++) {
             const policyList = listLocal[i].throttlingPolicies
                 .filter((policy) => !policy.includes(CONSTANTS.DEFAULT_SUBSCRIPTIONLESS_PLAN));
             listLocal[i].throttlingPolicies = policyList;
-            if (!((!subscribedIds.includes(listLocal[i].id) && !listLocal[i].advertiseInfo.advertised)
+            if (!((!subscribedIds.has(listLocal[i].id) && !listLocal[i].advertiseInfo.advertised)
                 && listLocal[i].isSubscriptionAvailable)) {
                 listLocal[i].throttlingPolicies = null;
             }

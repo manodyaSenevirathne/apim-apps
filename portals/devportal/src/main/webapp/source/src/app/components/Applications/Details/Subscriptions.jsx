@@ -255,6 +255,7 @@ class Subscriptions extends React.Component {
             subscriptionCount: 0,
             subscriptionOffset: 0,
             dialogSubscriptions: null,
+            dialogRefreshKey: 0,
         };
         this.checkSubValidationDisabled = this.checkSubValidationDisabled.bind(this);
         this.handleSubscriptionDelete = this.handleSubscriptionDelete.bind(this);
@@ -277,7 +278,6 @@ class Subscriptions extends React.Component {
         this.searchTextTmp = '';
         this.mounted = false;
         this.subscriptionsRequestId = 0;
-        this.dialogLoadRequestId = 0;
     }
 
     /**
@@ -294,14 +294,12 @@ class Subscriptions extends React.Component {
     componentWillUnmount() {
         this.mounted = false;
         this.subscriptionsRequestId += 1;
-        this.dialogLoadRequestId += 1;
         this.resetPageDataCache();
     }
 
     handleOpenDialog() {
         const { applicationId } = this.props.application;
         this.searchTextTmp = '';
-        this.dialogLoadRequestId += 1;
         this.setState((prevState) => ({
             openDialog: !prevState.openDialog,
             searchText: '',
@@ -444,33 +442,21 @@ class Subscriptions extends React.Component {
 
     /**
      *
-     * Update full subscriptions list used by the Subscribe APIs dialog.
+     * Refresh the Subscribe APIs dialog contents.
      * @param {*} applicationId application id
      * @returns {Promise<void>}
      * @memberof Subscriptions
      */
     updateDialogSubscriptions(applicationId) {
-        const requestId = ++this.dialogLoadRequestId;
-        return this.loadAllSubscriptions(applicationId)
-            .then((dialogSubscriptions) => {
-                if (this.mounted
-                    && requestId === this.dialogLoadRequestId
-                    && this.state.openDialog
-                    && this.props.application.applicationId === applicationId) {
-                    this.setState({ dialogSubscriptions });
-                }
-                return null;
-            })
-            .catch((error) => {
-                if (this.mounted && requestId === this.dialogLoadRequestId) {
-                    const { status } = error;
-                    if (status === 401) {
-                        this.setState({ isAuthorize: false });
-                    } else {
-                        this.setState({ dialogSubscriptions: [] });
-                    }
-                }
-            });
+        if (this.mounted
+            && this.state.openDialog
+            && this.props.application.applicationId === applicationId) {
+            this.setState((prevState) => ({
+                dialogSubscriptions: [],
+                dialogRefreshKey: prevState.dialogRefreshKey + 1,
+            }));
+        }
+        return Promise.resolve();
     }
 
     handleSubscriptionPageChange(event, page) {
@@ -711,7 +697,7 @@ class Subscriptions extends React.Component {
      */
     render() {
         const {
-            isAuthorize, openDialog, searchText, dialogSubscriptions,
+            isAuthorize, openDialog, searchText, dialogSubscriptions, dialogRefreshKey,
         } = this.state;
 
         if (!isAuthorize) {
@@ -947,8 +933,8 @@ class Subscriptions extends React.Component {
                                 {dialogSubscriptions ? (
                                     <APIList
                                         apisNotFound={apisNotFound}
-                                        subscriptions={dialogSubscriptions}
                                         applicationId={applicationId}
+                                        refreshKey={dialogRefreshKey}
                                         handleSubscribe={
                                             (appInner, apiInner, policy) => this.handleSubscribe(
                                                 appInner, apiInner, policy,
