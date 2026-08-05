@@ -162,7 +162,7 @@ class APICardView extends React.Component {
             return Promise.resolve(subscribedIds);
         }
         const client = new Subscription();
-        return Promise.all(list.map((api) => client.getSubscriptions(api.id, applicationId, 1, 0)
+        return Promise.all(list.map((api) => client.getSubscriptions(api.id, applicationId, 1, 0, 'ALL')
             .then((response) => {
                 const subList = (response && response.body && response.body.list) || [];
                 if (subList.length > 0) {
