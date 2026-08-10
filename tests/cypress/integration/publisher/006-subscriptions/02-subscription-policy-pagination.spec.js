@@ -108,7 +108,6 @@ describe("API subscription policies - pagination", () => {
             cy.get('#itest-api-details-portal-config-acc').click();
             cy.get('#left-menu-itemsubscriptions').click();
             cy.wait('@getPolicies');
-            cy.wait('@getPolicies');
 
             // Step 3: Change rows per page to 10 (settings.json may default to a larger value)
             cy.get('div[class*="MuiTablePagination-select"]').first().click();
@@ -130,7 +129,6 @@ describe("API subscription policies - pagination", () => {
             cy.get('[data-testid="policy-checkbox-platinumpolicy01"] input').should('be.checked');
             cy.get('#subscriptions-save-btn').click();
             cy.wait('@saveApi');
-            cy.wait('@getPolicies');
             cy.wait('@getPolicies');
 
             // Step 7: Change rows per page back to 10
