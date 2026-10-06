@@ -532,6 +532,10 @@ export default function Environments() {
     const restApi = new API();
     const restProductApi = new APIProduct();
     const [selectedRevision, setRevision] = useState([]);
+    // Tracks the latest user toggle for each env's "Display on Dev Portal" switch so
+    // a subsequent revision deploy from the same page reads the new value instead of
+    // the stale allEnvRevision cache. Updated by DisplayDevportal via the onToggle prop.
+    const [envDisplayOverrides, setEnvDisplayOverrides] = useState({});
     const [internalGateways, setInternalGateways] = useState([]);
     const [externalGateways, setExternalGateways] = useState([]);
     const [selectedVhosts, setVhosts] = useState(null);
@@ -858,14 +862,41 @@ export default function Environments() {
     };
 
     const handleSelect = (event) => {
-        const revisions = selectedRevision.filter((r) => r.env !== event.target.name);
-        const oldRevision = selectedRevision.find((r) => r.env === event.target.name);
-        let displayOnDevPortal = true;
+        const envName = event.target.name;
+        const revisions = selectedRevision.filter((r) => r.env !== envName);
+        const oldRevision = selectedRevision.find((r) => r.env === envName);
+        let displayOnDevPortal;
         if (oldRevision) {
             displayOnDevPortal = oldRevision.displayOnDevPortal;
+        } else if (Object.prototype.hasOwnProperty.call(envDisplayOverrides, envName)) {
+            // Honour a toggle the user just flipped on the same page.
+            displayOnDevPortal = envDisplayOverrides[envName];
+        } else {
+            // Inherit the current live deployment's visibility when redeploying to an env
+            // that already has an approved deployment; otherwise default to true.
+            const liveInfo = allEnvRevision
+                && allEnvRevision
+                    .flatMap((r) => r.deploymentInfo || [])
+                    .find((e) => e.name === envName);
+            displayOnDevPortal = liveInfo && typeof liveInfo.displayOnDevportal !== 'undefined'
+                ? liveInfo.displayOnDevportal
+                : true;
         }
-        revisions.push({ env: event.target.name, revision: event.target.value, displayOnDevPortal });
+        revisions.push({ env: envName, revision: event.target.value, displayOnDevPortal });
         setRevision(revisions);
+    };
+
+    /**
+     * Handles toggling the display of a revision on the developer portal.
+     * @param {string} envName the environment name
+     * @param {boolean} value the new display-on-dev-portal value
+     */
+    const handleDisplayOnDevportalToggle = (envName, value) => {
+        setEnvDisplayOverrides((prev) => ({ ...prev, [envName]: value }));
+        // Patch any already-picked revision so an immediate deploy carries the new value
+        // instead of the live-env value captured by handleSelect at pick time.
+        setRevision((prev) => prev.map((r) =>
+            r.env === envName ? { ...r, displayOnDevPortal: value } : r));
     };
 
     const handleVhostSelect = (event) => {
@@ -3590,6 +3621,7 @@ export default function Environments() {
                                                 name={row.name}
                                                 api={api}
                                                 EnvDeployments={allEnvDeployments[row.name]}
+                                                onToggle={handleDisplayOnDevportalToggle}
                                             />
                                         </TableCell>
                                         {settings.isGatewayNotificationEnabled
@@ -3818,6 +3850,7 @@ export default function Environments() {
                                                 name={row.name}
                                                 api={api}
                                                 EnvDeployments={allEnvDeployments[row.name]}
+                                                onToggle={handleDisplayOnDevportalToggle}
                                             />
                                         </TableCell>
                                         <TableCell>

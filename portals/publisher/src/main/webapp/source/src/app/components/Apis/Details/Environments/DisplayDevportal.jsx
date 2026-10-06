@@ -34,6 +34,7 @@ export default function DisplayDevportal(props) {
         api,
         name,
         EnvDeployments,
+        onToggle,
     } = props;
     const restApi = new API();
     const restAPIProduct = new APIProduct();
@@ -68,6 +69,11 @@ export default function DisplayDevportal(props) {
                 MCPServer.displayInDevportal(api.id, base64url.encode(event.target.name), body);
             } else {
                 restApi.displayInDevportalAPI(api.id, base64url.encode(event.target.name), body);
+            }
+            // Notify the parent so a subsequent revision deploy from the same page
+            // reads the new value instead of the stale allEnvRevision cache.
+            if (typeof onToggle === 'function') {
+                onToggle(event.target.name, event.target.checked);
             }
         }
     };
