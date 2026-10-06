@@ -874,10 +874,14 @@ export default function Environments() {
         } else {
             // Inherit the current live deployment's visibility when redeploying to an env
             // that already has an approved deployment; otherwise default to true.
+            // Filter by APPROVED/null status so a coexisting CREATED (pending) record,
+            // whose visibility was forced to false by handlePendingDeployments, is not
+            // mistaken for the live state.
             const liveInfo = allEnvRevision
                 && allEnvRevision
                     .flatMap((r) => r.deploymentInfo || [])
-                    .find((e) => e.name === envName);
+                    .find((e) => e.name === envName
+                        && (e.status === null || e.status === 'APPROVED'));
             displayOnDevPortal = liveInfo && typeof liveInfo.displayOnDevportal !== 'undefined'
                 ? liveInfo.displayOnDevportal
                 : true;
