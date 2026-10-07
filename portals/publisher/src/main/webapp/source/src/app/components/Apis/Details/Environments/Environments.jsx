@@ -861,31 +861,36 @@ export default function Environments() {
         setExtraRevisionToDelete([event.target.value, event.target.name]);
     };
 
+    /**
+     * Resolve the displayOnDevportal value to use for an env when building a deploy
+     * request. Prefers a toggle the user just flipped on the same page, then the
+     * current live (APPROVED) deployment's visibility, then true as the default.
+     * Shared by handleSelect (dropdown pick) and createDeployRevision (Deploy New
+     * Revision button) so both paths honour the user's intent instead of
+     * hard-coding true.
+     * @param {string} envName the environment name
+     */
+    const resolveDisplayOnDevportalForEnv = (envName) => {
+        if (Object.prototype.hasOwnProperty.call(envDisplayOverrides, envName)) {
+            return envDisplayOverrides[envName];
+        }
+        const liveInfo = allEnvRevision
+            && allEnvRevision
+                .flatMap((r) => r.deploymentInfo || [])
+                .find((e) => e.name === envName
+                    && (e.status === null || e.status === 'APPROVED'));
+        return liveInfo && typeof liveInfo.displayOnDevportal !== 'undefined'
+            ? liveInfo.displayOnDevportal
+            : true;
+    };
+
     const handleSelect = (event) => {
         const envName = event.target.name;
         const revisions = selectedRevision.filter((r) => r.env !== envName);
         const oldRevision = selectedRevision.find((r) => r.env === envName);
-        let displayOnDevPortal;
-        if (oldRevision) {
-            displayOnDevPortal = oldRevision.displayOnDevPortal;
-        } else if (Object.prototype.hasOwnProperty.call(envDisplayOverrides, envName)) {
-            // Honour a toggle the user just flipped on the same page.
-            displayOnDevPortal = envDisplayOverrides[envName];
-        } else {
-            // Inherit the current live deployment's visibility when redeploying to an env
-            // that already has an approved deployment; otherwise default to true.
-            // Filter by APPROVED/null status so a coexisting CREATED (pending) record,
-            // whose visibility was forced to false by handlePendingDeployments, is not
-            // mistaken for the live state.
-            const liveInfo = allEnvRevision
-                && allEnvRevision
-                    .flatMap((r) => r.deploymentInfo || [])
-                    .find((e) => e.name === envName
-                        && (e.status === null || e.status === 'APPROVED'));
-            displayOnDevPortal = liveInfo && typeof liveInfo.displayOnDevportal !== 'undefined'
-                ? liveInfo.displayOnDevportal
-                : true;
-        }
+        const displayOnDevPortal = oldRevision
+            ? oldRevision.displayOnDevPortal
+            : resolveDisplayOnDevportalForEnv(envName);
         revisions.push({ env: envName, revision: event.target.value, displayOnDevPortal });
         setRevision(revisions);
     };
@@ -1406,7 +1411,7 @@ export default function Environments() {
                         body1.push({
                             name: env,
                             vhost: vhostList.find((v) => v.env === env).vhost,
-                            displayOnDevportal: true,
+                            displayOnDevportal: resolveDisplayOnDevportalForEnv(env),
                         });
                     }
                     setIsDeploying(true);
@@ -1459,7 +1464,7 @@ export default function Environments() {
                         body1.push({
                             name: env,
                             vhost: vhostList.find((v) => v.env === env).vhost,
-                            displayOnDevportal: true,
+                            displayOnDevportal: resolveDisplayOnDevportalForEnv(env),
                         });
                     }
                     setIsDeploying(true);
@@ -1513,7 +1518,7 @@ export default function Environments() {
                             name: envList[i],
                             vhost: api.gatewayVendor === 'wso2' ? vhostList.find((v) => v.env === envList[i]).vhost
                                 : ' ',
-                            displayOnDevportal: true,
+                            displayOnDevportal: resolveDisplayOnDevportalForEnv(envList[i]),
                         });
                     }
                     restProductApi.deployProductRevision(api.id, response.body.id, body1)
