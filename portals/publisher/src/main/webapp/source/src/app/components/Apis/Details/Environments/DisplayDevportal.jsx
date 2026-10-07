@@ -38,14 +38,7 @@ export default function DisplayDevportal(props) {
     } = props;
     const restApi = new API();
     const restAPIProduct = new APIProduct();
-    // Default visibility is on for envs that have never been deployed to, matching
-    // the backend's default when no explicit displayOnDevportal value is supplied.
-    // Previously this coalesced undefined -> false, which showed the switch as OFF
-    // while a subsequent first-time deploy would actually persist it as ON — a
-    // visual-vs-request mismatch for brand new APIs.
-    const [check, setCheck] = useState(
-        typeof EnvDeployments.disPlayDevportal === 'undefined' ? true : EnvDeployments.disPlayDevportal,
-    );
+    const [check, setCheck] = useState(EnvDeployments.disPlayDevportal);
 
     const getAllowedScopes = () => {
         if (api.apiType && api.apiType.toUpperCase() === 'MCP') {
@@ -57,7 +50,7 @@ export default function DisplayDevportal(props) {
     const isCreateOrPublishRestricted = () => isRestricted(getAllowedScopes(), api);
 
     useEffect(() => {
-        setCheck(typeof EnvDeployments.disPlayDevportal === 'undefined' ? true : EnvDeployments.disPlayDevportal);
+        setCheck(typeof EnvDeployments.disPlayDevportal === 'undefined' ? false : EnvDeployments.disPlayDevportal);
     },
     [EnvDeployments.disPlayDevportal]);
 
